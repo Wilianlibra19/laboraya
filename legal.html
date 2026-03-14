@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaboraYa - Encuentra trabajo cerca de ti</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2196F3;
+            --primary-dark: #1976D2;
+            --secondary: #10B981;
+            --dark: #0F172A;
+            --gray: #64748B;
+            --light-gray: #F1F5F9;
+            --white: #FFFFFF;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.7;
+            color: var(--dark);
+            background: var(--white);
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--gray);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        /* Hero Section */
+        .hero {
+            margin-top: 80px;
+            min-height: 90vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: moveGrid 20s linear infinite;
+        }
+
+        @keyframes moveGrid {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            color: white;
+            max-width: 800px;
+            padding: 40px;
+        }
+
+        .hero h1 {
+            font-size: 4em;
+            font-weight: 800;
+            margin-bottom: 20px;
+            line-height: 1.1;
+            animation: fadeInUp 1s ease;
+        }
+
+        .hero p {
+            font-size: 1.4em;
+            opacity: 0.95;
+            margin-bottom: 40px;
+            animation: fadeInUp 1s ease 0.2s both;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            margin-bottom: 30px;
+            animation: fadeInUp 1s ease 0.1s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 80px 40px;
+        }
+
+        .legal-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 80px 40px;
+        }
+
+        /* Section Headers */
+        .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+
+        .section-header.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .section-header h2 {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 15px;
+        }
+
+        .section-header p {
+            font-size: 1.2em;
+            color: var(--gray);
+        }
+
+        /* Legal Section */
+        .legal-section {
+            margin-bottom: 40px;
+            padding: 30px;
+            background: var(--light-gray);
+            border-radius: 15px;
+            border-left: 4px solid var(--primary);
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+
+        .legal-section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .legal-section h2 {
+            font-size: 1.6em;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 15px;
+        }
+
+        .legal-section h3 {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: var(--dark);
+            margin: 30px 0 15px 0;
+        }
+
+        .legal-section p {
+            font-size: 1.05em;
+            color: var(--gray);
+            margin-bottom: 15px;
+            line-height: 1.8;
+        }
+
+        .legal-section ul {
+            margin: 15px 0 15px 30px;
+        }
+
+        .legal-section li {
+            color: var(--gray);
+            margin-bottom: 10px;
+            font-size: 1.05em;
+            line-height: 1.8;
+        }
+
+        .update-date {
+            color: var(--gray);
+            font-size: 1.1em;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        /* Divider */
+        .divider {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            margin: 80px 0;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+        }
+
+        .divider.visible {
+            opacity: 1;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--dark);
+            color: white;
+            padding: 60px 40px 30px;
+            text-align: center;
+        }
+
+        footer p {
+            color: var(--gray);
+            margin: 10px 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 2.5em;
+            }
+
+            .hero p {
+                font-size: 1.1em;
+            }
+
+            .container, .legal-container {
+                padding: 40px 20px;
+            }
+
+            .legal-section {
+                padding: 20px;
+            }
+
+            .section-header h2 {
+                font-size: 2em;
+            }
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <div class="logo">
+                <div class="logo-icon">🔨</div>
+                <span>LaboraYa</span>
+            </div>
+            <div class="nav-links">
+                <a href="#inicio">Inicio</a>
+                <a href="#terminos">Términos</a>
+                <a href="#privacidad">Privacidad</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="inicio">
+        <div class="hero-content">
+            <div class="hero-badge">🔨 LaboraYa</div>
+            <h1>Encuentra trabajo cerca de ti</h1>
+            <p>Conectamos trabajadores con oportunidades laborales en tiempo real</p>
+        </div>
+    </section>
+
+    <!-- Términos y Condiciones -->
+    <section id="terminos">
+        <div class="legal-container">
+            <div class="section-header">
+                <h2>Términos y Condiciones</h2>
+                <p>Condiciones de uso de la plataforma LaboraYa</p>
+            </div>
+            <p class="update-date"><strong>Última actualización:</strong> 14 de Marzo de 2026</p>
+
+            <div class="legal-section">
+                <h2>1. Aceptación de los Términos</h2>
+                <p>Al acceder y utilizar LaboraYa, usted acepta estar sujeto a estos Términos y Condiciones de Uso. Si no está de acuerdo, no debe utilizar nuestra plataforma.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2>2. Descripción del Servicio</h2>
+                <p>LaboraYa es una plataforma digital que conecta a personas que buscan realizar trabajos temporales con personas que necesitan servicios. Actuamos como intermediarios facilitando la conexión entre ambas partes.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2>3. Registro de Cuenta</h2>
+                <p>Para utilizar LaboraYa, debe:</p>
+                <ul>
+                    <li>Tener al menos 18 años de edad</li>
+                    <li>Proporcionar información precisa, completa y actualizada</li>
+                    <li>Mantener la seguridad y confidencialidad de su contraseña</li>
+                    <li>Ser responsable de todas las actividades realizadas bajo su cuenta</li>
+                    <li>Notificar inmediatamente cualquier uso no autorizado de su cuenta</li>
+                </ul>
+            </div>
+
+            <div class="legal-section">
+                <h2>4. Uso Aceptable</h2>
+                <p>Los usuarios se comprometen a:</p>
+                <ul>
+                    <li>Usar la plataforma de manera legal, ética y responsable</li>
+                    <li>No publicar contenido falso, fraudulento o engañoso</li>
+                    <li>No acosar, intimidar o discriminar a otros usuarios</li>
+                    <li>Respetar los derechos de propiedad intelectual</li>
+                    <li>No utilizar la plataforma para actividades ilegales</li>
+                    <li>Cumplir con todas las leyes y regulaciones aplicables</li>
+                </ul>
+            </div>
+
+            <div class="legal-section">
+                <h2>5. Pagos y Comisiones</h2>
+                <p>LaboraYa cobra una comisión del 10% sobre cada transacción completada exitosamente. Los pagos se procesan de manera segura a través de nuestra plataforma. Los usuarios son responsables de cumplir con sus obligaciones fiscales.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2>6. Responsabilidades</h2>
+                <p>LaboraYa actúa únicamente como intermediario. No somos responsables de:</p>
+                <ul>
+                    <li>La calidad, seguridad o legalidad de los trabajos realizados</li>
+                    <li>Disputas entre usuarios (clientes y trabajadores)</li>
+                    <li>Pérdidas, daños o lesiones resultantes del uso de la plataforma</li>
+                    <li>La veracidad de la información proporcionada por los usuarios</li>
+                    <li>El cumplimiento de acuerdos entre usuarios</li>
+                </ul>
+            </div>
+
+            <div class="legal-section">
+                <h2>7. Cancelaciones y Reembolsos</h2>
+                <p>Las políticas de cancelación y reembolso se establecen de mutuo acuerdo entre el cliente y el trabajador. LaboraYa puede mediar en disputas pero no garantiza reembolsos.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2>8. Modificaciones</h2>
+                <p>Nos reservamos el derecho de modificar estos términos en cualquier momento. Los cambios entrarán en vigor inmediatamente después de su publicación en la plataforma.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2>9. Terminación</h2>
+                <p>Podemos suspender o terminar su cuenta si viola estos términos o si detectamos actividad fraudulenta o ilegal.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2>10. Ley Aplicable</h2>
+                <p>Estos términos se rigen por las leyes de la República del Perú. Cualquier disputa se resolverá en los tribunales competentes de Lima, Perú.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Política de Privacidad -->
+    <section id="privacidad">
+        <div class="legal-container">
+            <div class="section-header">
+                <h2>Política de Privacidad</h2>
+                <p>Cómo protegemos y usamos tu información personal</p>
+            </div>
+            <p class="update-date"><strong>Última actualización:</strong> 14 de Marzo de 2026</p>
+
+            <div class="legal-section">
+                <h2>1. Introducción</h2>
+                <p>En LaboraYa, nos comprometemos a proteger su privacidad y datos personales. Esta política explica cómo recopilamos, usamos, compartimos y protegemos su información.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2>2. Información que Recopilamos</h2>
+                <p>Recopilamos los siguientes tipos de información:</p>
+                <ul>
+                    <li>Información de registro: nombre completo, correo electrónico, número de teléfono</li>
+                    <li>Información de ubicación: para mostrar trabajos cercanos y facilitar conexiones</li>
+                    <li>Información de perfil: foto, habilidades, descripción, disponibilidad</li>
+                    <li>Información de trabajos: publicaciones, mensajes, calificaciones</li>
+                    <li>Información del dispositivo: tipo de dispositivo, sistema operativo, dirección IP</li>
+                    <li>Documentos: CV, certificados, licencias (opcional)</li>
+                </ul>
+            </div>
+
+            <div class="legal-section">
+                <h2>3. Cómo Usamos su Información</h2>
+                <p>Utilizamos su información para:</p>
+                <ul>
+                    <li>Proporcionar, mantener y mejorar nuestros servicios</li>
+                    <li>Conectar trabajadores con empleadores de manera eficiente</li>
+                    <li>Procesar pagos y transacciones de forma segura</li>
+                    <li>Enviar notificaciones importantes sobre trabajos y mensajes</li>
+                    <li>Prevenir fraudes y garantizar la seguridad de la plataforma</li>
+                    <li>Cumplir con obligaciones legales y regulatorias</li>
+                    <li>Analizar el uso de la plataforma para mejorar la experiencia</li>
+                </ul>
+            </div>
+
+            <div class="legal-section">
+                <h2>4. Compartir Información</h2>
+                <p>Compartimos su información con:</p>
+                <ul>
+                    <li>Otros usuarios: nombre, foto, calificaciones, habilidades (información pública del perfil)</li>
+                    <li>Proveedores de servicios: Firebase (Google Cloud), Cloudinary para almacenamiento</li>
+                    <li>Autoridades legales: cuando sea requerido por ley o para proteger derechos</li>
+                </ul>
+                <p><strong>NO vendemos ni alquilamos su información personal a terceros.</strong></p>
+            </div>
+
+            <div class="legal-section">
+                <h2>5. Almacenamiento y Seguridad</h2>
+                <p>Sus datos se almacenan en:</p>
+                <ul>
+                    <li>Firebase: base de datos en Google Cloud Platform</li>
+                    <li>Cloudinary: almacenamiento seguro de imágenes y documentos</li>
+                    <li>Ubicación: servidores en Estados Unidos con estándares de seguridad internacionales</li>
+                </ul>
+                <p>Implementamos medidas de seguridad técnicas y organizativas para proteger sus datos contra acceso no autorizado, pérdida o alteración.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2>6. Sus Derechos</h2>
+                <p>Usted tiene derecho a:</p>
+                <ul>
+                    <li>Acceder: solicitar una copia de su información personal</li>
+                    <li>Corregir: actualizar información inexacta o incompleta</li>
+                    <li>Eliminar: solicitar la eliminación de su cuenta y datos</li>
+                    <li>Exportar: obtener sus datos en formato portable</li>
+                    <li>Oponerse: rechazar ciertos usos de su información</li>
+                    <li>Limitar: restringir el procesamiento de sus datos</li>
+                </ul>
+            </div>
+
+            <div class="legal-section">
+                <h2>7. Retención de Datos</h2>
+                <p>Conservamos su información mientras su cuenta esté activa o según sea necesario para proporcionar servicios. Después de eliminar su cuenta, conservamos ciertos datos por razones legales durante el tiempo requerido por ley.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2>8. Cookies y Tecnologías Similares</h2>
+                <p>Utilizamos cookies y tecnologías similares para mejorar la funcionalidad de la plataforma, analizar el uso y personalizar su experiencia.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2>9. Menores de Edad</h2>
+                <p>LaboraYa no está dirigido a menores de 18 años. No recopilamos intencionalmente información de menores. Si descubrimos que hemos recopilado datos de un menor, los eliminaremos inmediatamente.</p>
+            </div>
+
+            <div class="legal-section">
+                <h2>10. Cambios a esta Política</h2>
+                <p>Podemos actualizar esta política periódicamente. Le notificaremos sobre cambios significativos a través de la plataforma o por correo electrónico.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div style="max-width: 1200px; margin: 0 auto;">
+            <div style="font-size: 2em; margin-bottom: 20px;">🔨</div>
+            <h3 style="font-size: 1.8em; margin-bottom: 10px; color: white;">LaboraYa</h3>
+            <p style="font-size: 1.1em; margin-bottom: 30px;">Encuentra trabajo cerca de ti</p>
+
+            <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 30px; margin-top: 30px;">
+                <p>Email: laboraya@gmail.com</p>
+                <p>Teléfono: +51 982 257 569</p>
+                <p>Lima, Perú 🇵🇪</p>
+                <p style="margin-top: 20px;">© 2026 LaboraYa. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Nav shadow on scroll
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 50) {
+                nav.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.1)';
+            } else {
+                nav.style.boxShadow = 'none';
+            }
+        });
+
+        // Intersection Observer for animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all sections
+        document.querySelectorAll('.section-header, .legal-section, .divider').forEach(el => {
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>
