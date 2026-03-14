@@ -1,0 +1,105 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Función auxiliar para verificar autenticación
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Función auxiliar para verificar si es el dueño
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // USERS - Usuarios
+    match /users/{userId} {
+      // Cualquiera puede leer perfiles (para ver info de otros usuarios)
+      allow read: if true;
+      
+      // Solo el dueño puede crear su propio perfil
+      allow create: if isOwner(userId);
+      
+      // El dueño puede actualizar su perfil
+      // O cualquier usuario autenticado puede actualizar earnings, rating y completedJobs
+      // (necesario para cuando completan un trabajo)
+      allow update: if isOwner(userId) || 
+                       (isAuthenticated() && 
+                        request.resource.data.diff(resource.data).affectedKeys()
+                          .hasOnly(['earnings', 'rating', 'completedJobs']));
+      
+      // Solo el dueño puede eliminar su perfil
+      allow delete: if isOwner(userId);
+    }
+    
+    // JOBS - Trabajos
+    match /jobs/{jobId} {
+      // Cualquiera puede leer trabajos (para buscar)
+      allow read: if true;
+      
+      // Solo usuarios autenticados pueden crear trabajos
+      allow create: if isAuthenticated() && 
+                       request.resource.data.createdBy == request.auth.uid;
+      
+      // El creador puede actualizar su trabajo
+      // O cualquier usuario autenticado puede aceptar el trabajo (cuando acceptedBy es el usuario actual)
+      // O el trabajador aceptado puede actualizar los campos de estado
+      allow update: if isAuthenticated() && 
+                       (resource.data.createdBy == request.auth.uid ||
+                        request.resource.data.acceptedBy == request.auth.uid ||
+                        resource.data.acceptedBy == request.auth.uid);
+      
+      // Solo el creador puede eliminar su trabajo
+      allow delete: if isAuthenticated() && 
+                       resource.data.createdBy == request.auth.uid;
+    }
+    
+    // MESSAGES - Mensajes
+    match /messages/{messageId} {
+      // Solo usuarios autenticados pueden leer mensajes
+      allow read: if isAuthenticated();
+      
+      // Solo usuarios autenticados pueden crear mensajes
+      // Y el senderId debe coincidir con el usuario autenticado
+      allow create: if isAuthenticated() && 
+                       request.resource.data.senderId == request.auth.uid;
+      
+      // Permitir actualizar al remitente O al receptor (para marcar como leído)
+      allow update: if isAuthenticated() && 
+                       (resource.data.senderId == request.auth.uid ||
+                        resource.data.receiverId == request.auth.uid);
+      
+      // Solo el remitente puede eliminar su mensaje
+      allow delete: if isAuthenticated() && 
+                       resource.data.senderId == request.auth.uid;
+    }
+    
+    // REVIEWS - Calificaciones
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+                               resource.data.reviewerId == request.auth.uid;
+    }
+    
+    // NOTIFICATIONS - Notificaciones
+    match /notifications/{notificationId} {
+      // Solo el destinatario puede leer sus notificaciones
+      allow read: if isAuthenticated() && 
+                     resource.data.userId == request.auth.uid;
+      
+      // IMPORTANTE: Cualquier usuario autenticado puede crear notificaciones
+      // (necesario para que un trabajador pueda crear notificaciones para el dueño del trabajo)
+      allow create: if isAuthenticated();
+      
+      // Solo el destinatario puede marcar como leída o actualizar
+      allow update: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid;
+      
+      // Solo el destinatario puede eliminar su notificación
+      allow delete: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid;
+    }
+  }
+}

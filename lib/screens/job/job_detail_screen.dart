@@ -1,0 +1,641 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../core/models/job_model.dart';
+import '../../core/models/user_model.dart';
+import '../../core/services/job_service.dart';
+import '../../core/services/user_service.dart';
+import '../../utils/constants.dart';
+import '../../utils/helpers.dart';
+import '../../widgets/job/job_progress_bar.dart';
+import '../../widgets/job/job_action_buttons.dart';
+
+class JobDetailScreen extends StatefulWidget {
+  final String jobId;
+
+  const JobDetailScreen({super.key, required this.jobId});
+
+  @override
+  State<JobDetailScreen> createState() => _JobDetailScreenState();
+}
+
+class _JobDetailScreenState extends State<JobDetailScreen> {
+  JobModel? job;
+  UserModel? creator;
+  bool isLoading = true;
+  StreamSubscription<DocumentSnapshot>? _jobSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+    _listenToJobChanges();
+  }
+
+  @override
+  void dispose() {
+    _jobSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _listenToJobChanges() {
+    // Escuchar cambios en tiempo real del trabajo
+    _jobSubscription = FirebaseFirestore.instance
+        .collection('jobs')
+        .doc(widget.jobId)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.exists && mounted) {
+        setState(() {
+          job = JobModel.fromFirestore(snapshot);
+        });
+        print('🔄 Trabajo actualizado en tiempo real: ${job?.jobStatus}');
+      }
+    });
+  }
+
+  Future<void> _loadData() async {
+    if (!mounted) return;
+    
+    setState(() => isLoading = true);
+    
+    final jobService = context.read<JobService>();
+    final userService = context.read<UserService>();
+
+    print('🔍 Cargando trabajo: ${widget.jobId}');
+    
+    // Obtener DIRECTAMENTE desde Firebase (sin caché)
+    job = await jobService.getJobById(widget.jobId);
+    
+    if (job != null) {
+      print('✅ Trabajo: ${job!.title}');
+      print('📊 status: ${job!.status}');
+      print('📊 jobStatus: ${job!.jobStatus}');
+      print('👤 acceptedBy: ${job!.acceptedBy}');
+      
+      creator = await userService.getUserById(job!.createdBy);
+    } else {
+      print('❌ Trabajo no encontrado');
+    }
+
+    if (mounted) {
+      setState(() => isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (job == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Trabajo')),
+        body: const Center(child: Text('Trabajo no encontrado')),
+      );
+    }
+
+    final currentUser = context.watch<UserService>().currentUser;
+    final isOwner = currentUser?.id == job!.createdBy;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Detalle del Trabajo'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: const Icon(Icons.favorite_border),
+            onPressed: () {},
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Galería de Fotos
+            if (job!.images.isNotEmpty)
+              SizedBox(
+                height: 250,
+                child: PageView.builder(
+                  itemCount: job!.images.length,
+                  itemBuilder: (context, index) {
+                    final imageUrl = job!.images[index];
+                    return GestureDetector(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => Dialog(
+                            backgroundColor: Colors.transparent,
+                            child: Stack(
+                              children: [
+                                Center(
+                                  child: Image.network(
+                                    imageUrl,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 40,
+                                  right: 20,
+                                  child: IconButton(
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 30,
+                                    ),
+                                    onPressed: () => Navigator.pop(context),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey[300],
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    size: 50,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          if (job!.images.length > 1)
+                            Positioned(
+                              bottom: 10,
+                              right: 10,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.6),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  '${index + 1}/${job!.images.length}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            
+            Container(
+              padding: const EdgeInsets.all(AppSizes.paddingLarge),
+              color: Theme.of(context).cardColor,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          job!.title,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      if (job!.isUrgent)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.urgent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'URGENTE',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Icon(
+                        CategoryIcons.icons[job!.category] ?? Icons.work,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        job!.category,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: AppColors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Barra de progreso del trabajo (SIEMPRE mostrar)
+            JobProgressBar(job: job!),
+
+            const SizedBox(height: 16),
+
+            Container(
+              padding: const EdgeInsets.all(AppSizes.paddingLarge),
+              color: Theme.of(context).cardColor,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Pago',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        Helpers.formatCurrency(job!.payment),
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      Text(
+                        job!.paymentType,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text(
+                        'Duración',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        job!.duration,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            Container(
+              padding: const EdgeInsets.all(AppSizes.paddingLarge),
+              color: Theme.of(context).cardColor,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Descripción',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    job!.description,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            Container(
+              padding: const EdgeInsets.all(AppSizes.paddingLarge),
+              color: Theme.of(context).cardColor,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Detalles',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _DetailRow(
+                    icon: Icons.people,
+                    label: 'Personas necesarias',
+                    value: '${job!.workersNeeded}',
+                  ),
+                  _DetailRow(
+                    icon: Icons.calendar_today,
+                    label: 'Fecha programada',
+                    value: job!.scheduledDate != null
+                        ? Helpers.formatDate(job!.scheduledDate!)
+                        : 'Por coordinar',
+                  ),
+                  _DetailRow(
+                    icon: Icons.location_on,
+                    label: 'Ubicación',
+                    value: job!.address,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Documentos PDF
+            if (job!.documents.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.all(AppSizes.paddingLarge),
+                color: Theme.of(context).cardColor,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Documentos',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: job!.documents.length,
+                      itemBuilder: (context, index) {
+                        final docUrl = job!.documents[index];
+                        final docName = 'Documento ${index + 1}.pdf';
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.deepOrange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.deepOrange.withOpacity(0.3),
+                            ),
+                          ),
+                          child: ListTile(
+                            leading: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.deepOrange.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.picture_as_pdf,
+                                color: Colors.deepOrange,
+                                size: 28,
+                              ),
+                            ),
+                            title: Text(
+                              docName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            subtitle: const Text('Documento PDF'),
+                            trailing: IconButton(
+                              icon: const Icon(
+                                Icons.download,
+                                color: AppColors.primary,
+                              ),
+                              onPressed: () async {
+                                // Abrir el PDF en el navegador
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Abriendo documento...'),
+                                  ),
+                                );
+                                // Aquí podrías usar url_launcher para abrir el PDF
+                                // await launchUrl(Uri.parse(docUrl));
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            if (job!.documents.isNotEmpty) const SizedBox(height: 16),
+
+            if (creator != null)
+              Container(
+                padding: const EdgeInsets.all(AppSizes.paddingLarge),
+                color: Theme.of(context).cardColor,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Publicado por',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 30,
+                          backgroundColor: AppColors.primary,
+                          child: Text(
+                            Helpers.getInitials(creator!.name),
+                            style: const TextStyle(
+                              color: AppColors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                creator!.name,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.star,
+                                    size: 16,
+                                    color: AppColors.urgent,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${creator!.rating.toStringAsFixed(1)} (${creator!.completedJobs} trabajos)',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 100),
+          ],
+        ),
+      ),
+      bottomNavigationBar: _buildBottomBar(context, currentUser, isOwner),
+    );
+  }
+
+  Widget? _buildBottomBar(BuildContext context, UserModel? currentUser, bool isOwner) {
+    if (currentUser == null || job == null) return null;
+
+    print('🔵 Construyendo barra inferior de botones');
+    print('🔵 Estado del trabajo: ${job!.jobStatus}');
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        border: Border(
+          top: BorderSide(
+            color: AppColors.primary,
+            width: 3,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 15,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSizes.paddingMedium),
+          child: JobActionButtons(
+            job: job!,
+            currentUser: currentUser,
+            onStatusChanged: _loadData,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: AppColors.grey),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.grey,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
