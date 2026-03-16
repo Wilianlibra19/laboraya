@@ -35,9 +35,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isTyping = false;
   bool _isSending = false;
   UserModel? _otherUser;
-  bool _isLoadingUser = true;
   List<MessageModel>? _cachedMessages;
-  bool _isInitializing = true; // Flag para saber si está inicializando
 
   @override
   void initState() {
@@ -54,31 +52,28 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _initialize() async {
-    // Cargar todo en paralelo
-    await Future.wait([
-      _loadOtherUser(),
-      _loadInitialMessages(),
-    ]);
-    
-    if (mounted) {
-      setState(() {
-        _isInitializing = false;
-      });
-      _markAsReadDelayed();
-    }
+    // Cargar todo en paralelo sin bloquear la UI
+    _loadOtherUser();
+    _loadInitialMessages();
+    _markAsReadDelayed();
   }
 
   Future<void> _loadInitialMessages() async {
     final messageRepo = FirebaseMessageRepository();
     try {
       print('⏳ Cargando mensajes iniciales...');
+      final startTime = DateTime.now();
+      
       final messages = await messageRepo.getMessages(widget.jobId);
+      
+      final loadTime = DateTime.now().difference(startTime).inMilliseconds;
+      print('✅ Mensajes cargados en ${loadTime}ms: ${messages.length} mensajes');
+      
       if (mounted) {
         setState(() {
           _cachedMessages = messages;
         });
       }
-      print('✅ Mensajes iniciales cargados: ${messages.length}');
     } catch (e) {
       print('❌ Error cargando mensajes iniciales: $e');
       if (mounted) {
@@ -96,16 +91,10 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) {
         setState(() {
           _otherUser = user;
-          _isLoadingUser = false;
         });
       }
     } catch (e) {
       print('❌ Error cargando usuario: $e');
-      if (mounted) {
-        setState(() {
-          _isLoadingUser = false;
-        });
-      }
     }
   }
 
@@ -247,23 +236,10 @@ class _ChatScreenState extends State<ChatScreen> {
     final currentUser = context.watch<UserService>().currentUser;
     final messageRepo = context.read<MessageService>().repository as FirebaseMessageRepository;
 
-    // Mostrar pantalla de carga inicial mientras se cargan los datos
-    if (_isInitializing) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Chat'),
-        ),
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
-        title: _isLoadingUser
-            ? const Text('Chat')
-            : GestureDetector(
+        title: _otherUser != null
+            ? GestureDetector(
                 onTap: () {
                   if (_otherUser != null) {
                     Navigator.push(
@@ -329,7 +305,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ],
                 ),
-              ),
+              )
+            : const Text('Chat'),
         actions: [
           if (_otherUser != null)
             IconButton(

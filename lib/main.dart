@@ -25,12 +25,19 @@ void main() async {
   );
   
   // Habilitar persistencia de Firestore para carga instantánea desde caché
+  try {
+    await FirebaseFirestore.instance.clearPersistence();
+    print('🗑️ Caché de Firestore limpiada');
+  } catch (e) {
+    print('⚠️ No se pudo limpiar caché (normal si la app ya está en uso): $e');
+  }
+  
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
   
-  print('✅ Firestore persistencia habilitada');
+  print('✅ Firestore persistencia habilitada con caché ilimitada');
   
   // Inicializar notificaciones
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);

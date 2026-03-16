@@ -8,11 +8,25 @@ class FirebaseMessageRepository implements MessageRepository {
   @override
   Future<List<MessageModel>> getMessages(String jobId) async {
     try {
+      print('📥 Obteniendo mensajes para jobId: $jobId');
+      
+      // Usar get() con opciones de caché
       final snapshot = await _firestore
           .collection('messages')
           .where('jobId', isEqualTo: jobId)
           .orderBy('createdAt', descending: false)
-          .get();
+          .get(const GetOptions(source: Source.cache)) // Intentar desde caché primero
+          .catchError((error) {
+            print('⚠️ No hay caché, obteniendo del servidor...');
+            // Si no hay caché, obtener del servidor
+            return _firestore
+                .collection('messages')
+                .where('jobId', isEqualTo: jobId)
+                .orderBy('createdAt', descending: false)
+                .get();
+          });
+
+      print('✅ Mensajes obtenidos: ${snapshot.docs.length} (desde ${snapshot.metadata.isFromCache ? "caché" : "servidor"})');
 
       return snapshot.docs.map((doc) {
         final data = doc.data();
@@ -28,7 +42,7 @@ class FirebaseMessageRepository implements MessageRepository {
         );
       }).toList();
     } catch (e) {
-      print('Error getting messages: $e');
+      print('❌ Error getting messages: $e');
       return [];
     }
   }

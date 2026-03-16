@@ -125,12 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('LaboraYa'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: _openFilters,
-            tooltip: 'Filtros',
-          ),
-          // Icono de solicitudes con contador
+          // Icono de solicitudes con contador (sin padding extra)
           if (user != null)
             StreamBuilder<int>(
               stream: JobApplicationService().getPendingApplicationsCountStream(user.id),
@@ -141,6 +136,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.people_outline),
+                      iconSize: 24,
+                      padding: const EdgeInsets.all(8),
+                      constraints: const BoxConstraints(),
                       onPressed: () {
                         Navigator.push(
                           context,
@@ -153,8 +151,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     if (applicationsCount > 0)
                       Positioned(
-                        right: 8,
-                        top: 8,
+                        right: 4,
+                        top: 4,
                         child: Container(
                           padding: const EdgeInsets.all(4),
                           decoration: const BoxDecoration(
@@ -162,14 +160,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             shape: BoxShape.circle,
                           ),
                           constraints: const BoxConstraints(
-                            minWidth: 18,
-                            minHeight: 18,
+                            minWidth: 16,
+                            minHeight: 16,
                           ),
                           child: Text(
                             applicationsCount > 9 ? '9+' : '$applicationsCount',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 10,
+                              fontSize: 9,
                               fontWeight: FontWeight.bold,
                             ),
                             textAlign: TextAlign.center,
@@ -180,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
-          // Icono de notificaciones con contador
+          // Icono de notificaciones con contador (sin padding extra)
           StreamBuilder<QuerySnapshot>(
             stream: user != null
                 ? FirebaseFirestore.instance
@@ -196,6 +194,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.notifications_outlined),
+                    iconSize: 24,
+                    padding: const EdgeInsets.all(8),
+                    constraints: const BoxConstraints(),
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -207,8 +208,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   if (unreadCount > 0)
                     Positioned(
-                      right: 8,
-                      top: 8,
+                      right: 4,
+                      top: 4,
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: const BoxDecoration(
@@ -216,14 +217,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           shape: BoxShape.circle,
                         ),
                         constraints: const BoxConstraints(
-                          minWidth: 18,
-                          minHeight: 18,
+                          minWidth: 16,
+                          minHeight: 16,
                         ),
                         child: Text(
                           unreadCount > 9 ? '9+' : '$unreadCount',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
+                            fontSize: 9,
                             fontWeight: FontWeight.bold,
                           ),
                           textAlign: TextAlign.center,
@@ -234,15 +235,51 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
+          // Menú con más opciones (sin padding extra)
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            iconSize: 24,
+            padding: const EdgeInsets.all(8),
+            onSelected: (value) {
+              if (value == 'filter') {
+                _openFilters();
+              } else if (value == 'nearby') {
+                _openNearbyJobs();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'filter',
+                child: Row(
+                  children: [
+                    Icon(Icons.filter_list, size: 20),
+                    SizedBox(width: 12),
+                    Text('Filtros avanzados'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'nearby',
+                child: Row(
+                  children: [
+                    Icon(Icons.location_on, size: 20),
+                    SizedBox(width: 12),
+                    Text('Trabajos cercanos'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          // Avatar del usuario (más pequeño y sin padding extra)
           Padding(
-            padding: const EdgeInsets.only(right: 12, left: 8),
+            padding: const EdgeInsets.only(right: 8, left: 4),
             child: GestureDetector(
               onTap: () {
                 // Ir a perfil (cambiar a tab de perfil)
                 DefaultTabController.of(context)?.animateTo(3);
               },
               child: CircleAvatar(
-                radius: 18,
+                radius: 16,
                 backgroundColor: AppColors.primary,
                 backgroundImage: user?.photo != null && user!.photo!.isNotEmpty
                     ? NetworkImage(user.photo!)
@@ -251,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? Text(
                         Helpers.getInitials(user?.name ?? 'Usuario'),
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -343,75 +380,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Nearby Jobs Button
-                    InkWell(
-                      onTap: _openNearbyJobs,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.blue[400]!,
-                              Colors.blue[600]!,
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.blue.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.location_on,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Trabajos cerca de mí',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    'Encuentra trabajos en tu zona',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Icon(
-                              Icons.arrow_forward_ios,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    // Nearby Jobs Button ya no está aquí, se movió al menú
                   ],
                 ),
               ),
