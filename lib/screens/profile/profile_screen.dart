@@ -13,6 +13,7 @@ import 'my_documents_screen.dart';
 import 'favorites_screen.dart';
 import 'history_screen.dart';
 import 'edit_profile_screen.dart';
+import 'reviews_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -132,31 +133,75 @@ class ProfileScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.star,
-                        color: AppColors.urgent,
-                        size: 20,
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ReviewsScreen(
+                            userId: user.id,
+                            userName: user.name,
+                            rating: user.rating,
+                            totalReviews: user.totalReviews,
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        user.rating.toStringAsFixed(1),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.amber.withOpacity(0.3),
+                          width: 1,
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Text(
-                        '${user.completedJobs} trabajos completados',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.grey,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.star,
+                            color: Colors.amber,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            user.rating.toStringAsFixed(1),
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            '${user.totalReviews} ${user.totalReviews == 1 ? "calificación" : "calificaciones"}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppColors.grey,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.chevron_right,
+                            color: AppColors.grey,
+                            size: 20,
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${user.completedJobs} trabajos completados',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.grey,
+                    ),
                   ),
                 ],
               ),
