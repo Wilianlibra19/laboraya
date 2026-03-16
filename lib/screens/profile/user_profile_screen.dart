@@ -15,6 +15,40 @@ class UserProfileScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Perfil'),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'block') {
+                _showBlockDialog(context);
+              } else if (value == 'report') {
+                _showReportDialog(context);
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'block',
+                child: Row(
+                  children: [
+                    Icon(Icons.block, color: Colors.red, size: 20),
+                    SizedBox(width: 12),
+                    Text('Bloquear usuario'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'report',
+                child: Row(
+                  children: [
+                    Icon(Icons.flag, color: Colors.orange, size: 20),
+                    SizedBox(width: 12),
+                    Text('Reportar'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -425,6 +459,119 @@ class UserProfileScreen extends StatelessWidget {
             const SizedBox(height: 32),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showBlockDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.block, color: Colors.red),
+            const SizedBox(width: 8),
+            const Text('Bloquear usuario'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('¿Bloquear a ${user.name}?'),
+            const SizedBox(height: 12),
+            const Text(
+              'Esta persona no podrá:',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            const Text('• Enviarte mensajes'),
+            const Text('• Ver tus trabajos publicados'),
+            const Text('• Aplicar a tus trabajos'),
+            const SizedBox(height: 12),
+            const Text(
+              'Podrás desbloquearlo desde Configuración > Usuarios bloqueados',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${user.name} ha sido bloqueado'),
+                  backgroundColor: Colors.orange,
+                  action: SnackBarAction(
+                    label: 'Deshacer',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Bloqueo cancelado'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Bloquear'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReportDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.flag, color: Colors.orange),
+            const SizedBox(width: 8),
+            const Text('Reportar usuario'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('¿Reportar a ${user.name}?'),
+            const SizedBox(height: 12),
+            const Text(
+              'Nuestro equipo revisará este reporte.',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Reporte enviado. Gracias por tu colaboración.'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Reportar'),
+          ),
+        ],
       ),
     );
   }

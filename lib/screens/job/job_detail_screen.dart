@@ -8,10 +8,12 @@ import '../../core/models/job_application_model.dart';
 import '../../core/services/job_service.dart';
 import '../../core/services/user_service.dart';
 import '../../core/services/job_application_service.dart';
+import '../../core/services/favorite_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../widgets/job/job_progress_bar.dart';
 import '../../widgets/job/job_action_buttons.dart';
+import '../report/report_screen.dart';
 import 'job_applications_screen.dart';
 
 class JobDetailScreen extends StatefulWidget {
@@ -27,6 +29,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   JobModel? job;
   UserModel? creator;
   bool isLoading = true;
+  bool isFavorite = false;
   StreamSubscription<DocumentSnapshot>? _jobSubscription;
 
   @override
@@ -34,6 +37,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     super.initState();
     _loadData();
     _listenToJobChanges();
+    _checkFavorite();
   }
 
   @override
@@ -85,6 +89,43 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     if (mounted) {
       setState(() => isLoading = false);
     }
+  }
+
+  Future<void> _checkFavorite() async {
+    final currentUser = context.read<UserService>().currentUser;
+    if (currentUser == null) return;
+
+    final favoriteService = FavoriteService();
+    final result = await favoriteService.isFavorite(currentUser.id, widget.jobId);
+    
+    if (mounted) {
+      setState(() => isFavorite = result);
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    final currentUser = context.read<UserService>().currentUser;
+    if (currentUser == null) return;
+
+    final favoriteService = FavoriteService();
+    
+    if (isFavorite) {
+      await favoriteService.removeFavorite(currentUser.id, widget.jobId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Eliminado de favoritos')),
+        );
+      }
+    } else {
+      await favoriteService.addFavorite(currentUser.id, widget.jobId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Agregado a favoritos')),
+        );
+      }
+    }
+    
+    setState(() => isFavorite = !isFavorite);
   }
 
   @override
@@ -160,12 +201,49 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               },
             ),
           IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () {},
+            icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border),
+            color: isFavorite ? Colors.red : null,
+            onPressed: _toggleFavorite,
           ),
-          IconButton(
-            icon: const Icon(Icons.favorite_border),
-            onPressed: () {},
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'share') {
+                // TODO: Implementar compartir
+              } else if (value == 'report') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ReportScreen(
+                      reportedId: widget.jobId,
+                      reportedType: 'job',
+                      reportedName: job!.title,
+                    ),
+                  ),
+                );
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'share',
+                child: Row(
+                  children: [
+                    Icon(Icons.share, size: 20),
+                    SizedBox(width: 12),
+                    Text('Compartir'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'report',
+                child: Row(
+                  children: [
+                    Icon(Icons.flag, size: 20, color: Colors.red),
+                    SizedBox(width: 12),
+                    Text('Reportar', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),

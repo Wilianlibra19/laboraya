@@ -18,6 +18,8 @@ class _FilterScreenState extends State<FilterScreen> {
   Set<String> _selectedCategories = {};
   bool _onlyUrgent = false;
   String _dateFilter = 'Todos';
+  double _minRating = 0;
+  double _maxDistance = 50;
 
   final List<String> _districts = [
     'Todos',
@@ -52,6 +54,8 @@ class _FilterScreenState extends State<FilterScreen> {
       );
       _onlyUrgent = widget.currentFilters!['onlyUrgent'] ?? false;
       _dateFilter = widget.currentFilters!['dateFilter'] ?? 'Todos';
+      _minRating = widget.currentFilters!['minRating'] ?? 0;
+      _maxDistance = widget.currentFilters!['maxDistance'] ?? 50;
     }
   }
 
@@ -63,6 +67,8 @@ class _FilterScreenState extends State<FilterScreen> {
       'categories': _selectedCategories.toList(),
       'onlyUrgent': _onlyUrgent,
       'dateFilter': _dateFilter,
+      'minRating': _minRating,
+      'maxDistance': _maxDistance,
     };
     Navigator.pop(context, filters);
   }
@@ -75,6 +81,8 @@ class _FilterScreenState extends State<FilterScreen> {
       _selectedCategories.clear();
       _onlyUrgent = false;
       _dateFilter = 'Todos';
+      _minRating = 0;
+      _maxDistance = 50;
     });
   }
 
@@ -226,6 +234,96 @@ class _FilterScreenState extends State<FilterScreen> {
                 selectedColor: AppColors.primary.withOpacity(0.2),
               );
             }).toList(),
+          ),
+          const SizedBox(height: 24),
+
+          // Rating Mínimo
+          _buildSectionTitle('⭐ Rating Mínimo del Publicador'),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey[850]
+                  : Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Rating mínimo:'),
+                    Row(
+                      children: [
+                        Text(
+                          _minRating.toStringAsFixed(1),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.star, color: Colors.amber, size: 20),
+                      ],
+                    ),
+                  ],
+                ),
+                Slider(
+                  value: _minRating,
+                  min: 0,
+                  max: 5,
+                  divisions: 10,
+                  label: _minRating.toStringAsFixed(1),
+                  onChanged: (value) {
+                    setState(() => _minRating = value);
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Distancia Máxima
+          _buildSectionTitle('📏 Distancia Máxima'),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey[850]
+                  : Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Hasta:'),
+                    Text(
+                      '${_maxDistance.toInt()} km',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                Slider(
+                  value: _maxDistance,
+                  min: 1,
+                  max: 50,
+                  divisions: 49,
+                  label: '${_maxDistance.toInt()} km',
+                  onChanged: (value) {
+                    setState(() => _maxDistance = value);
+                  },
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 24),
 

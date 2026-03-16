@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/constants.dart';
+import '../onboarding/onboarding_screen.dart';
 import 'welcome_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -20,16 +22,32 @@ class _SplashScreenState extends State<SplashScreen> {
     try {
       // Esperar 2 segundos para mostrar el splash
       await Future.delayed(const Duration(seconds: 2));
+      
+      // Verificar si es la primera vez
+      final prefs = await SharedPreferences.getInstance();
+      final onboardingCompleted = prefs.getBool('onboarding_completed') ?? false;
+      
+      if (mounted) {
+        if (onboardingCompleted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+          );
+        }
+      }
     } catch (e) {
       debugPrint('Error initializing: $e');
       await Future.delayed(const Duration(seconds: 1));
-    }
-
-    // Navegar a WelcomeScreen
-    if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-      );
+      
+      // En caso de error, ir a WelcomeScreen
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+        );
+      }
     }
   }
 

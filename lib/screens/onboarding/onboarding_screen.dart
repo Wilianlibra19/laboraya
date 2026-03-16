@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/constants.dart';
-import '../main_screen.dart';
+import '../auth/login_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -15,69 +16,41 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<OnboardingPage> _pages = [
     OnboardingPage(
-      icon: Icons.work_outline,
-      title: '¡Bienvenido a LaboraYa!',
-      description:
-          'Conecta con personas que necesitan ayuda o encuentra trabajos cerca de ti de manera rápida y segura.',
+      title: 'Encuentra Trabajo',
+      description: 'Busca trabajos cerca de ti y aplica con un mensaje personalizado',
+      image: Icons.work_outline,
       color: Colors.blue,
     ),
     OnboardingPage(
-      icon: Icons.search,
-      title: 'Encuentra Trabajos',
-      description:
-          'Busca trabajos disponibles en tu zona, filtra por categoría, pago y distancia. Acepta los que más te convengan.',
+      title: 'Publica Trabajos',
+      description: 'Necesitas ayuda? Publica un trabajo y recibe solicitudes de trabajadores calificados',
+      image: Icons.add_business,
       color: Colors.green,
     ),
     OnboardingPage(
-      icon: Icons.add_circle_outline,
-      title: 'Publica Trabajos',
-      description:
-          '¿Necesitas ayuda? Publica tu trabajo con detalles, fotos y pago. Recibe ofertas de personas interesadas.',
-      color: Colors.orange,
-    ),
-    OnboardingPage(
-      icon: Icons.chat_bubble_outline,
-      title: 'Comunícate Fácilmente',
-      description:
-          'Chatea directamente con los interesados, coordina detalles, fecha y hora antes de confirmar el trabajo.',
+      title: 'Chat en Tiempo Real',
+      description: 'Comunícate directamente con empleadores y trabajadores',
+      image: Icons.chat_bubble_outline,
       color: Colors.purple,
     ),
     OnboardingPage(
-      icon: Icons.star_outline,
-      title: 'Califica y Confía',
-      description:
-          'Después de cada trabajo, califica tu experiencia. Las calificaciones ayudan a construir confianza en la comunidad.',
-      color: Colors.amber,
+      title: 'Gana Dinero',
+      description: 'Completa trabajos, recibe calificaciones y aumenta tus ganancias',
+      image: Icons.attach_money,
+      color: Colors.orange,
     ),
   ];
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  void _onPageChanged(int page) {
-    setState(() {
-      _currentPage = page;
-    });
-  }
-
-  void _nextPage() {
-    if (_currentPage < _pages.length - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+  Future<void> _completeOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarding_completed', true);
+    
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
-    } else {
-      _finishOnboarding();
     }
-  }
-
-  void _finishOnboarding() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainScreen()),
-    );
   }
 
   @override
@@ -86,71 +59,80 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Botón Saltar
-            Align(
-              alignment: Alignment.topRight,
-              child: TextButton(
-                onPressed: _finishOnboarding,
-                child: const Text(
-                  'Saltar',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: AppColors.grey,
-                  ),
-                ),
-              ),
-            ),
-
-            // PageView con las páginas
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
-                onPageChanged: _onPageChanged,
+                onPageChanged: (index) {
+                  setState(() => _currentPage = index);
+                },
                 itemCount: _pages.length,
                 itemBuilder: (context, index) {
                   return _buildPage(_pages[index]);
                 },
               ),
             ),
-
-            // Indicadores de página
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  _pages.length,
-                  (index) => _buildPageIndicator(index),
-                ),
-              ),
-            ),
-
-            // Botón Siguiente/Comenzar
             Padding(
               padding: const EdgeInsets.all(24),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _nextPage,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                  ),
-                  child: Text(
-                    _currentPage == _pages.length - 1
-                        ? 'Comenzar'
-                        : 'Siguiente',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      _pages.length,
+                      (index) => _buildDot(index),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 24),
+                  if (_currentPage == _pages.length - 1)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _completeOnboarding,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Comenzar',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    )
+                  else
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: _completeOnboarding,
+                          child: const Text('Saltar'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            _pageController.nextPage(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Siguiente'),
+                        ),
+                      ],
+                    ),
+                ],
               ),
             ),
           ],
@@ -165,41 +147,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Icono
           Container(
-            width: 120,
-            height: 120,
+            width: 200,
+            height: 200,
             decoration: BoxDecoration(
               color: page.color.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              page.icon,
-              size: 60,
+              page.image,
+              size: 100,
               color: page.color,
             ),
           ),
           const SizedBox(height: 48),
-
-          // Título
           Text(
             page.title,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: page.color,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 24),
-
-          // Descripción
+          const SizedBox(height: 16),
           Text(
             page.description,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
+              color: Colors.grey[600],
               height: 1.5,
-              color: AppColors.grey,
             ),
             textAlign: TextAlign.center,
           ),
@@ -208,16 +184,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildPageIndicator(int index) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
+  Widget _buildDot(int index) {
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4),
       width: _currentPage == index ? 24 : 8,
       height: 8,
       decoration: BoxDecoration(
-        color: _currentPage == index
-            ? AppColors.primary
-            : AppColors.primary.withOpacity(0.3),
+        color: _currentPage == index ? AppColors.primary : Colors.grey[300],
         borderRadius: BorderRadius.circular(4),
       ),
     );
@@ -225,15 +198,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 class OnboardingPage {
-  final IconData icon;
   final String title;
   final String description;
+  final IconData image;
   final Color color;
 
   OnboardingPage({
-    required this.icon,
     required this.title,
     required this.description,
+    required this.image,
     required this.color,
   });
 }

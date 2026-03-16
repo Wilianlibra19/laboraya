@@ -8,10 +8,15 @@ import '../../widgets/common/whatsapp_icon.dart';
 import '../auth/welcome_screen.dart';
 import '../legal/terms_screen.dart';
 import '../legal/privacy_screen.dart';
+import '../settings/settings_screen.dart';
+import '../favorites/favorites_screen.dart';
+import '../stats/earnings_stats_screen.dart';
+import '../referrals/referral_screen.dart';
+import '../verification/verify_identity_screen.dart';
 import 'my_jobs_screen.dart';
 import 'my_documents_screen.dart';
-import 'favorites_screen.dart';
 import 'history_screen.dart';
+import 'work_history_screen.dart';
 import 'edit_profile_screen.dart';
 import 'reviews_screen.dart';
 
@@ -501,6 +506,57 @@ class ProfileScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const HistoryScreen()),
+                );
+              },
+            ),
+            _MenuOption(
+              icon: Icons.work_history,
+              title: 'Trabajos Completados',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WorkHistoryScreen()),
+                );
+              },
+            ),
+            _MenuOption(
+              icon: Icons.bar_chart,
+              title: 'Estadísticas',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const EarningsStatsScreen()),
+                );
+              },
+            ),
+            _MenuOption(
+              icon: Icons.people,
+              title: 'Referidos',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ReferralScreen()),
+                );
+              },
+            ),
+            if (!user.isVerified)
+              _MenuOption(
+                icon: Icons.verified_user,
+                title: 'Verificar Identidad',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const VerifyIdentityScreen()),
+                  );
+                },
+              ),
+            _MenuOption(
+              icon: Icons.settings,
+              title: 'Configuración',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
                 );
               },
             ),
