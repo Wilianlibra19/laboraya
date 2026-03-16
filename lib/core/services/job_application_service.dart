@@ -17,7 +17,7 @@ class JobApplicationService {
       jobId: jobId,
       applicantId: applicant.id,
       applicantName: applicant.name,
-      applicantPhoto: applicant.photoUrl ?? '',
+      applicantPhoto: applicant.photo ?? '',
       applicantRating: applicant.rating,
       applicantCompletedJobs: applicant.completedJobs,
       message: message,
