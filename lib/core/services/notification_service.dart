@@ -131,6 +131,58 @@ class NotificationService {
     await _showLocalNotification(title: title, body: body);
   }
 
+  // Enviar notificación cuando alguien solicita un trabajo
+  static Future<void> sendJobApplicationNotification({
+    required String jobTitle,
+    required String applicantName,
+    required String jobOwnerId,
+    String? jobId,
+  }) async {
+    try {
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      
+      // Crear notificación en Firestore
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'userId': jobOwnerId,
+        'title': 'Nueva solicitud de trabajo 📩',
+        'body': '$applicantName quiere trabajar en "$jobTitle"',
+        'type': 'job_application',
+        'jobId': jobId,
+        'isRead': false,
+        'createdAt': Timestamp.now(),
+      });
+      
+      print('✅ Notificación de solicitud guardada en Firestore para: $jobOwnerId');
+      
+      // Obtener el token FCM del dueño del trabajo
+      final ownerDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(jobOwnerId)
+          .get();
+      
+      final ownerToken = ownerDoc.data()?['fcmToken'];
+      
+      if (ownerToken != null) {
+        print('📤 Debería enviar notificación push a token: $ownerToken');
+        print('   Título: Nueva solicitud de trabajo 📩');
+        print('   Mensaje: $applicantName quiere trabajar en "$jobTitle"');
+      }
+      
+      // Mostrar notificación local SOLO si el usuario actual es el dueño del trabajo
+      if (currentUserId == jobOwnerId) {
+        await _showLocalNotification(
+          title: 'Nueva solicitud de trabajo 📩',
+          body: '$applicantName quiere trabajar en "$jobTitle"',
+        );
+        print('✅ Notificación local mostrada al dueño');
+      } else {
+        print('⏭️ No se muestra notificación local (usuario actual no es el dueño)');
+      }
+    } catch (e) {
+      print('❌ Error enviando notificación de solicitud: $e');
+    }
+  }
+
   // Enviar notificación cuando aceptan un trabajo
   static Future<void> sendJobAcceptedNotification({
     required String jobTitle,

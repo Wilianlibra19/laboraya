@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/job_application_model.dart';
 import '../models/user_model.dart';
+import 'notification_service.dart';
 
 class JobApplicationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -29,6 +30,23 @@ class JobApplicationService {
         .collection('job_applications')
         .doc(applicationId)
         .set(application.toJson());
+    
+    // Obtener información del trabajo para enviar notificación
+    final jobDoc = await _firestore.collection('jobs').doc(jobId).get();
+    final jobData = jobDoc.data();
+    final jobTitle = jobData?['title'] ?? 'un trabajo';
+    final jobOwnerId = jobData?['createdBy'];
+    
+    // Enviar notificación al dueño del trabajo
+    if (jobOwnerId != null) {
+      await NotificationService.sendJobApplicationNotification(
+        jobTitle: jobTitle,
+        applicantName: applicant.name,
+        jobOwnerId: jobOwnerId,
+        jobId: jobId,
+      );
+      print('✅ Notificación de solicitud enviada al dueño: $jobOwnerId');
+    }
   }
 
   Stream<List<JobApplicationModel>> getJobApplications(String jobId) {
