@@ -52,16 +52,30 @@ class JobApplicationModel {
 
   factory JobApplicationModel.fromFirestore(dynamic snapshot) {
     final data = snapshot.data() as Map<String, dynamic>;
+    
+    // Manejar appliedAt de forma segura
+    DateTime appliedAtDate;
+    try {
+      if (data['appliedAt'] != null) {
+        appliedAtDate = (data['appliedAt'] as dynamic).toDate();
+      } else {
+        appliedAtDate = DateTime.now();
+      }
+    } catch (e) {
+      print('⚠️ Error parseando appliedAt: $e');
+      appliedAtDate = DateTime.now();
+    }
+    
     return JobApplicationModel(
       id: snapshot.id,
       jobId: data['jobId'] ?? '',
       applicantId: data['applicantId'] ?? '',
-      applicantName: data['applicantName'] ?? '',
+      applicantName: data['applicantName'] ?? 'Usuario',
       applicantPhoto: data['applicantPhoto'] ?? '',
       applicantRating: (data['applicantRating'] ?? 0).toDouble(),
       applicantCompletedJobs: data['applicantCompletedJobs'] ?? 0,
       message: data['message'] ?? '',
-      appliedAt: (data['appliedAt'] as dynamic).toDate(),
+      appliedAt: appliedAtDate,
       status: data['status'] ?? 'pending',
     );
   }

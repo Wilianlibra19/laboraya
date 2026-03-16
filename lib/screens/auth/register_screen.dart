@@ -246,7 +246,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Container(
                     constraints: const BoxConstraints(maxWidth: 400),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey[900]
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
@@ -263,21 +265,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const Text(
+                            Text(
                               'Crear Cuenta',
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.black,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : AppColors.black,
                               ),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 8),
-                            const Text(
+                            Text(
                               'Completa tus datos',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: AppColors.grey,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey[400]
+                                    : AppColors.grey,
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -286,12 +292,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             // Nombre
                             TextFormField(
                               controller: _nameController,
+                              style: TextStyle(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : AppColors.black,
+                                fontSize: 16,
+                              ),
                               decoration: InputDecoration(
                                 labelText: 'Nombre completo',
+                                labelStyle: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : AppColors.grey,
+                                ),
                                 hintText: 'Juan Pérez',
-                                prefixIcon: const Icon(Icons.person_outline),
+                                hintStyle: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[600]
+                                      : AppColors.grey.withOpacity(0.6),
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.person_outline,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : AppColors.grey,
+                                ),
                                 filled: true,
-                                fillColor: AppColors.background,
+                                fillColor: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey[850]
+                                    : AppColors.background,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   borderSide: BorderSide.none,
@@ -320,12 +349,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             // Email
                             TextFormField(
                               controller: _emailController,
+                              style: TextStyle(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : AppColors.black,
+                                fontSize: 16,
+                              ),
                               decoration: InputDecoration(
                                 labelText: 'Email',
+                                labelStyle: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : AppColors.grey,
+                                ),
                                 hintText: 'tu@email.com',
-                                prefixIcon: const Icon(Icons.email_outlined),
+                                hintStyle: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[600]
+                                      : AppColors.grey.withOpacity(0.6),
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.email_outlined,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : AppColors.grey,
+                                ),
                                 filled: true,
-                                fillColor: AppColors.background,
+                                fillColor: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey[850]
+                                    : AppColors.background,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   borderSide: BorderSide.none,
@@ -358,12 +410,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             // Teléfono
                             TextFormField(
                               controller: _phoneController,
+                              style: TextStyle(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : AppColors.black,
+                                fontSize: 16,
+                              ),
                               decoration: InputDecoration(
                                 labelText: 'Teléfono',
+                                labelStyle: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : AppColors.grey,
+                                ),
                                 hintText: '+51 999 999 999',
-                                prefixIcon: const Icon(Icons.phone_outlined),
+                                hintStyle: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[600]
+                                      : AppColors.grey.withOpacity(0.6),
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.phone_outlined,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : AppColors.grey,
+                                ),
                                 filled: true,
-                                fillColor: AppColors.background,
+                                fillColor: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey[850]
+                                    : AppColors.background,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   borderSide: BorderSide.none,
@@ -393,22 +468,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             // Contraseña
                             TextFormField(
                               controller: _passwordController,
+                              style: TextStyle(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : AppColors.black,
+                                fontSize: 16,
+                              ),
                               decoration: InputDecoration(
                                 labelText: 'Contraseña',
+                                labelStyle: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : AppColors.grey,
+                                ),
                                 hintText: '••••••••',
-                                prefixIcon: const Icon(Icons.lock_outline),
+                                hintStyle: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[600]
+                                      : AppColors.grey.withOpacity(0.6),
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.lock_outline,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : AppColors.grey,
+                                ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscurePassword
                                         ? Icons.visibility_off_outlined
                                         : Icons.visibility_outlined,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.grey[400]
+                                        : AppColors.grey,
                                   ),
                                   onPressed: () {
                                     setState(() => _obscurePassword = !_obscurePassword);
                                   },
                                 ),
                                 filled: true,
-                                fillColor: AppColors.background,
+                                fillColor: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey[850]
+                                    : AppColors.background,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   borderSide: BorderSide.none,
@@ -441,15 +542,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             // Confirmar contraseña
                             TextFormField(
                               controller: _confirmPasswordController,
+                              style: TextStyle(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : AppColors.black,
+                                fontSize: 16,
+                              ),
                               decoration: InputDecoration(
                                 labelText: 'Confirmar contraseña',
+                                labelStyle: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : AppColors.grey,
+                                ),
                                 hintText: '••••••••',
-                                prefixIcon: const Icon(Icons.lock_outline),
+                                hintStyle: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[600]
+                                      : AppColors.grey.withOpacity(0.6),
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.lock_outline,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : AppColors.grey,
+                                ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscureConfirmPassword
                                         ? Icons.visibility_off_outlined
                                         : Icons.visibility_outlined,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.grey[400]
+                                        : AppColors.grey,
                                   ),
                                   onPressed: () {
                                     setState(
@@ -457,7 +582,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   },
                                 ),
                                 filled: true,
-                                fillColor: AppColors.background,
+                                fillColor: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey[850]
+                                    : AppColors.background,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   borderSide: BorderSide.none,
@@ -491,7 +618,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: AppColors.background,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey[850]
+                                    : AppColors.background,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
@@ -503,6 +632,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       setState(() => _acceptedTerms = value ?? false);
                                     },
                                     activeColor: AppColors.primary,
+                                    checkColor: Colors.white,
+                                    side: BorderSide(
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.grey[600]!
+                                          : Colors.grey[400]!,
+                                      width: 2,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(4),
                                     ),
@@ -512,9 +648,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       padding: const EdgeInsets.only(top: 12, left: 4),
                                       child: RichText(
                                         text: TextSpan(
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 13,
-                                            color: AppColors.grey,
+                                            color: Theme.of(context).brightness == Brightness.dark
+                                                ? Colors.grey[400]
+                                                : AppColors.grey,
                                             height: 1.4,
                                           ),
                                           children: [

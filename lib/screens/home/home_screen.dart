@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/services/user_service.dart';
 import '../../core/services/job_service.dart';
+import '../../core/services/job_application_service.dart';
 import '../../core/models/job_model.dart';
 import '../../data/mock/mock_data.dart';
 import '../../utils/constants.dart';
@@ -11,6 +12,7 @@ import '../../widgets/job/job_card.dart';
 import '../job/job_detail_screen.dart';
 import '../job/create_job_screen.dart';
 import '../notifications/notifications_screen.dart';
+import '../job/my_job_applications_screen.dart';
 import 'category_jobs_screen.dart';
 import 'nearby_jobs_screen.dart';
 import 'filter_screen.dart';
@@ -128,6 +130,56 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: _openFilters,
             tooltip: 'Filtros',
           ),
+          // Icono de solicitudes con contador
+          if (user != null)
+            StreamBuilder<int>(
+              stream: JobApplicationService().getPendingApplicationsCountStream(user.id),
+              builder: (context, snapshot) {
+                final applicationsCount = snapshot.data ?? 0;
+                
+                return Stack(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.people_outline),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const MyJobApplicationsScreen(),
+                          ),
+                        );
+                      },
+                      tooltip: 'Solicitudes',
+                    ),
+                    if (applicationsCount > 0)
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 18,
+                            minHeight: 18,
+                          ),
+                          child: Text(
+                            applicationsCount > 9 ? '9+' : '$applicationsCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
           // Icono de notificaciones con contador
           StreamBuilder<QuerySnapshot>(
             stream: user != null
@@ -247,12 +299,32 @@ class _HomeScreenState extends State<HomeScreen> {
                     TextField(
                       controller: _searchController,
                       onChanged: _onSearchChanged,
+                      style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                      ),
                       decoration: InputDecoration(
                         hintText: 'Buscar trabajos...',
-                        prefixIcon: const Icon(Icons.search),
+                        hintStyle: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey[400]
+                              : Colors.grey[600],
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey[400]
+                              : Colors.grey[600],
+                        ),
                         suffixIcon: _searchQuery.isNotEmpty
                             ? IconButton(
-                                icon: const Icon(Icons.clear),
+                                icon: Icon(
+                                  Icons.clear,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : Colors.grey[600],
+                                ),
                                 onPressed: () {
                                   _searchController.clear();
                                   _onSearchChanged('');
@@ -260,7 +332,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               )
                             : null,
                         filled: true,
-                        fillColor: AppColors.background,
+                        fillColor: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey[800]
+                            : AppColors.background,
                         border: OutlineInputBorder(
                           borderRadius:
                               BorderRadius.circular(AppSizes.borderRadius),

@@ -33,15 +33,16 @@ class _ChatScreenState extends State<ChatScreen> {
   final _scrollController = ScrollController();
   String? _selectedImagePath;
   bool _isTyping = false;
-  bool _isSending = false; // Prevenir envíos múltiples
+  bool _isSending = false;
   UserModel? _otherUser;
   bool _isLoadingUser = true;
+  List<MessageModel>? _cachedMessages;
+  bool _isInitializing = true; // Flag para saber si está inicializando
 
   @override
   void initState() {
     super.initState();
-    _loadOtherUser();
-    _markAsReadDelayed();
+    _initialize();
     
     // Detectar cuando el usuario está escribiendo
     _messageController.addListener(() {
@@ -52,13 +53,60 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  Future<void> _initialize() async {
+    // Cargar todo en paralelo
+    await Future.wait([
+      _loadOtherUser(),
+      _loadInitialMessages(),
+    ]);
+    
+    if (mounted) {
+      setState(() {
+        _isInitializing = false;
+      });
+      _markAsReadDelayed();
+    }
+  }
+
+  Future<void> _loadInitialMessages() async {
+    final messageRepo = FirebaseMessageRepository();
+    try {
+      print('⏳ Cargando mensajes iniciales...');
+      final messages = await messageRepo.getMessages(widget.jobId);
+      if (mounted) {
+        setState(() {
+          _cachedMessages = messages;
+        });
+      }
+      print('✅ Mensajes iniciales cargados: ${messages.length}');
+    } catch (e) {
+      print('❌ Error cargando mensajes iniciales: $e');
+      if (mounted) {
+        setState(() {
+          _cachedMessages = [];
+        });
+      }
+    }
+  }
+
   Future<void> _loadOtherUser() async {
-    final userService = context.read<UserService>();
-    final user = await userService.getUserById(widget.otherUserId);
-    setState(() {
-      _otherUser = user;
-      _isLoadingUser = false;
-    });
+    try {
+      final userService = context.read<UserService>();
+      final user = await userService.getUserById(widget.otherUserId);
+      if (mounted) {
+        setState(() {
+          _otherUser = user;
+          _isLoadingUser = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Error cargando usuario: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingUser = false;
+        });
+      }
+    }
   }
 
   void _markAsReadDelayed() {
@@ -199,6 +247,18 @@ class _ChatScreenState extends State<ChatScreen> {
     final currentUser = context.watch<UserService>().currentUser;
     final messageRepo = context.read<MessageService>().repository as FirebaseMessageRepository;
 
+    // Mostrar pantalla de carga inicial mientras se cargan los datos
+    if (_isInitializing) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Chat'),
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: _isLoadingUser
@@ -284,23 +344,98 @@ class _ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: StreamBuilder<List<MessageModel>>(
               stream: messageRepo.getMessagesStream(widget.jobId),
+              initialData: _cachedMessages, // Usar mensajes cargados como datos iniciales
               builder: (context, snapshot) {
-                // Mostrar indicador solo en la primera carga
-                if (snapshot.connectionState == ConnectionState.waiting && 
-                    !snapshot.hasData) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
+                // Si tenemos datos (de caché o stream), mostrarlos inmediatamente
+                if (snapshot.hasData) {
+                  final messages = snapshot.data!;
+                  
+                  if (messages.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.chat_bubble_outline,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No hay mensajes aún',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '¡Envía el primer mensaje!',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    controller: _scrollController,
+                    reverse: true,
+                    padding: const EdgeInsets.all(AppSizes.paddingMedium),
+                    itemCount: messages.length,
+                    cacheExtent: 500,
+                    itemBuilder: (context, index) {
+                      final message = messages[messages.length - 1 - index];
+                      final isMe = message.senderId == currentUser?.id;
+
+                      return _MessageBubble(
+                        message: message,
+                        isMe: isMe,
+                        key: ValueKey(message.id),
+                      );
+                    },
+                  );
+                }
+
+                // Solo mostrar loading si NO tenemos datos en absoluto
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 40,
+                          height: 40,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Cargando mensajes...',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
                   );
                 }
 
                 if (snapshot.hasError) {
+                  print('❌ Error cargando mensajes: ${snapshot.error}');
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Icon(Icons.error_outline, size: 48, color: Colors.red),
                         const SizedBox(height: 16),
-                        Text('Error al cargar mensajes'),
+                        const Text('Error al cargar mensajes'),
                         const SizedBox(height: 8),
                         ElevatedButton(
                           onPressed: () => setState(() {}),
@@ -311,57 +446,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   );
                 }
 
-                final messages = snapshot.data ?? [];
-
-                if (messages.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.chat_bubble_outline,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No hay mensajes aún',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '¡Envía el primer mensaje!',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  controller: _scrollController,
-                  reverse: true,
-                  padding: const EdgeInsets.all(AppSizes.paddingMedium),
-                  itemCount: messages.length,
-                  // Optimización: usar cacheExtent para pre-renderizar items
-                  cacheExtent: 500,
-                  itemBuilder: (context, index) {
-                    final message = messages[messages.length - 1 - index];
-                    final isMe = message.senderId == currentUser?.id;
-
-                    return _MessageBubble(
-                      message: message,
-                      isMe: isMe,
-                      key: ValueKey(message.id), // Key para mejor performance
-                    );
-                  },
-                );
+                // Fallback
+                return const SizedBox.shrink();
               },
             ),
           ),
@@ -421,15 +507,27 @@ class _ChatScreenState extends State<ChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: _messageController,
+                      style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                      ),
                       decoration: InputDecoration(
                         hintText: 'Escribe un mensaje...',
+                        hintStyle: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey[500]
+                              : Colors.grey[600],
+                        ),
                         border: OutlineInputBorder(
                           borderRadius:
                               BorderRadius.circular(AppSizes.borderRadius),
                           borderSide: BorderSide.none,
                         ),
                         filled: true,
-                        fillColor: AppColors.background,
+                        fillColor: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey[800]
+                            : AppColors.background,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,

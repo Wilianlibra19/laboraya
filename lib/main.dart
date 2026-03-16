@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'data/local/hive_service.dart';
 import 'data/firebase/firebase_job_repository.dart';
@@ -22,6 +23,14 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // Habilitar persistencia de Firestore para carga instantánea desde caché
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
+  
+  print('✅ Firestore persistencia habilitada');
   
   // Inicializar notificaciones
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);

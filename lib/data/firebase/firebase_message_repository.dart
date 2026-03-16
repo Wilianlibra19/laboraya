@@ -33,14 +33,18 @@ class FirebaseMessageRepository implements MessageRepository {
     }
   }
 
-  /// Stream de mensajes en tiempo real
+  /// Stream de mensajes en tiempo real con caché
   Stream<List<MessageModel>> getMessagesStream(String jobId) {
+    print('📡 Iniciando stream de mensajes para jobId: $jobId');
+    
     return _firestore
         .collection('messages')
         .where('jobId', isEqualTo: jobId)
         .orderBy('createdAt', descending: false)
-        .snapshots()
+        .snapshots(includeMetadataChanges: false) // No incluir cambios de metadata para mejor performance
         .map((snapshot) {
+      print('📨 Snapshot recibido: ${snapshot.docs.length} mensajes, desde caché: ${snapshot.metadata.isFromCache}');
+      
       return snapshot.docs.map((doc) {
         final data = doc.data();
         return MessageModel(

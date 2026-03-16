@@ -154,7 +154,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   Container(
                     constraints: BoxConstraints(maxWidth: 400),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey[900]
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
@@ -171,21 +173,25 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const Text(
+                            Text(
                               'Iniciar Sesión',
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.black,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : AppColors.black,
                               ),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 8),
-                            const Text(
+                            Text(
                               'Ingresa a tu cuenta',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: AppColors.grey,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey[400]
+                                    : AppColors.grey,
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -194,12 +200,35 @@ class _LoginScreenState extends State<LoginScreen> {
                             // Email
                             TextFormField(
                               controller: _emailController,
+                              style: TextStyle(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : AppColors.black,
+                                fontSize: 16,
+                              ),
                               decoration: InputDecoration(
                                 labelText: 'Email',
+                                labelStyle: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : AppColors.grey,
+                                ),
                                 hintText: 'tu@email.com',
-                                prefixIcon: const Icon(Icons.email_outlined),
+                                hintStyle: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[600]
+                                      : AppColors.grey.withOpacity(0.6),
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.email_outlined,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : AppColors.grey,
+                                ),
                                 filled: true,
-                                fillColor: AppColors.background,
+                                fillColor: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey[850]
+                                    : AppColors.background,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   borderSide: BorderSide.none,
@@ -232,22 +261,48 @@ class _LoginScreenState extends State<LoginScreen> {
                             // Contraseña
                             TextFormField(
                               controller: _passwordController,
+                              style: TextStyle(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : AppColors.black,
+                                fontSize: 16,
+                              ),
                               decoration: InputDecoration(
                                 labelText: 'Contraseña',
+                                labelStyle: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : AppColors.grey,
+                                ),
                                 hintText: '••••••••',
-                                prefixIcon: const Icon(Icons.lock_outline),
+                                hintStyle: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[600]
+                                      : AppColors.grey.withOpacity(0.6),
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.lock_outline,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[400]
+                                      : AppColors.grey,
+                                ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscurePassword
                                         ? Icons.visibility_off_outlined
                                         : Icons.visibility_outlined,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.grey[400]
+                                        : AppColors.grey,
                                   ),
                                   onPressed: () {
                                     setState(() => _obscurePassword = !_obscurePassword);
                                   },
                                 ),
                                 filled: true,
-                                fillColor: AppColors.background,
+                                fillColor: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey[850]
+                                    : AppColors.background,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   borderSide: BorderSide.none,
@@ -359,10 +414,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Text(
+                                Text(
                                   '¿No tienes cuenta?',
                                   style: TextStyle(
-                                    color: AppColors.grey,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.grey[400]
+                                        : AppColors.grey,
                                   ),
                                 ),
                                 TextButton(

@@ -56,9 +56,20 @@ class JobApplicationService {
         .where('status', isEqualTo: 'pending')
         .orderBy('appliedAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => JobApplicationModel.fromFirestore(doc))
-            .toList());
+        .map((snapshot) {
+          print('📋 Solicitudes encontradas: ${snapshot.docs.length}');
+          return snapshot.docs.map((doc) {
+            try {
+              print('📄 Procesando solicitud: ${doc.id}');
+              print('📄 Datos: ${doc.data()}');
+              return JobApplicationModel.fromFirestore(doc);
+            } catch (e) {
+              print('❌ Error parseando solicitud ${doc.id}: $e');
+              print('❌ Datos problemáticos: ${doc.data()}');
+              rethrow;
+            }
+          }).toList();
+        });
   }
 
   Future<void> acceptApplication(String applicationId, String jobId) async {
@@ -115,5 +126,30 @@ class JobApplicationService {
         .get();
 
     return snapshot.docs.isNotEmpty;
+  }
+
+  // Obtener stream de solicitudes pendientes para trabajos del usuario
+  Stream<int> getPendingApplicationsCountStream(String userId) async* {
+    // Primero obtener todos los trabajos del usuario que están disponibles
+    final jobsSnapshot = await _firestore
+        .collection('jobs')
+        .where('createdBy', isEqualTo: userId)
+        .where('status', isEqualTo: 'available')
+        .get();
+
+    final jobIds = jobsSnapshot.docs.map((doc) => doc.id).toList();
+
+    if (jobIds.isEmpty) {
+      yield 0;
+      return;
+    }
+
+    // Escuchar cambios en las solicitudes de esos trabajos
+    yield* _firestore
+        .collection('job_applications')
+        .where('jobId', whereIn: jobIds)
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
   }
 }

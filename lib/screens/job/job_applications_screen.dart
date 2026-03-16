@@ -28,6 +28,32 @@ class JobApplicationsScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
+          if (snapshot.hasError) {
+            print('❌ Error en StreamBuilder: ${snapshot.error}');
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 80, color: Colors.red),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Error al cargar solicitudes',
+                    style: TextStyle(fontSize: 18, color: Colors.red),
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      '${snapshot.error}',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
               child: Column(
@@ -45,6 +71,7 @@ class JobApplicationsScreen extends StatelessWidget {
           }
 
           final applications = snapshot.data!;
+          print('✅ Mostrando ${applications.length} solicitudes');
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
