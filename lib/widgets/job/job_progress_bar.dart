@@ -104,6 +104,15 @@ class JobProgressBar extends StatelessWidget {
             
             // Descripción del paso actual
             _buildCurrentStepDescription(steps[currentStepIndex]),
+            
+            // Si es un contrato en progreso, mostrar barra de progreso de días
+            if (job.jobType == 'contract' && 
+                job.jobStatus == 'in_progress' && 
+                job.contractStartDate != null && 
+                job.estimatedDays != null) ...[
+              const SizedBox(height: 16),
+              _buildContractProgress(),
+            ],
           ],
         ),
       ),
@@ -240,6 +249,191 @@ class JobProgressBar extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildContractProgress() {
+    final startDate = job.contractStartDate!;
+    final estimatedDays = job.estimatedDays!;
+    final now = DateTime.now();
+    final daysPassed = now.difference(startDate).inDays;
+    final progress = (daysPassed / estimatedDays).clamp(0.0, 1.0);
+    final estimatedEndDate = startDate.add(Duration(days: estimatedDays));
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.orange.shade50,
+            Colors.deepOrange.shade50,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.orange.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.calendar_today,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Progreso del Contrato',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Barra de progreso
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 12,
+              backgroundColor: Colors.grey.shade200,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                progress >= 1.0 ? Colors.red : Colors.orange,
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Información de días
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Día $daysPassed de $estimatedDays',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${(progress * 100).toStringAsFixed(0)}% completado',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: progress >= 1.0 
+                      ? Colors.red.withOpacity(0.1)
+                      : Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: progress >= 1.0 
+                        ? Colors.red.withOpacity(0.3)
+                        : Colors.orange.withOpacity(0.3),
+                  ),
+                ),
+                child: Text(
+                  progress >= 1.0 ? 'Vencido' : 'En tiempo',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: progress >= 1.0 ? Colors.red : Colors.orange,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Fechas
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.play_circle_outline,
+                      size: 16,
+                      color: Colors.green,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Inicio: ${_formatDate(startDate)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.flag_outlined,
+                      size: 16,
+                      color: progress >= 1.0 ? Colors.red : Colors.orange,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Fin estimado: ${_formatDate(estimatedEndDate)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final months = [
+      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 
   List<ProgressStep> _getSteps() {

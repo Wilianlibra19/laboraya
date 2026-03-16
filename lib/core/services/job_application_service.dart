@@ -75,17 +75,20 @@ class JobApplicationService {
   Future<void> acceptApplication(String applicationId, String jobId) async {
     final batch = _firestore.batch();
 
+    // Actualizar estado de la solicitud
     batch.update(
       _firestore.collection('job_applications').doc(applicationId),
       {'status': 'accepted'},
     );
 
+    // Obtener datos de la solicitud
     final appDoc = await _firestore
         .collection('job_applications')
         .doc(applicationId)
         .get();
     final applicantId = appDoc.data()!['applicantId'];
 
+    // Actualizar el trabajo
     batch.update(
       _firestore.collection('jobs').doc(jobId),
       {
@@ -95,6 +98,7 @@ class JobApplicationService {
       },
     );
 
+    // Rechazar todas las demás solicitudes pendientes
     final otherApps = await _firestore
         .collection('job_applications')
         .where('jobId', isEqualTo: jobId)
@@ -108,6 +112,27 @@ class JobApplicationService {
     }
 
     await batch.commit();
+
+    // Obtener información del trabajo y del dueño para enviar notificación
+    final jobDoc = await _firestore.collection('jobs').doc(jobId).get();
+    final jobData = jobDoc.data();
+    final jobTitle = jobData?['title'] ?? 'un trabajo';
+    final jobOwnerId = jobData?['createdBy'];
+    
+    if (jobOwnerId != null) {
+      final ownerDoc = await _firestore.collection('users').doc(jobOwnerId).get();
+      final ownerData = ownerDoc.data();
+      final ownerName = ownerData?['name'] ?? 'El dueño del trabajo';
+      
+      // Enviar notificación al trabajador que aplicó
+      await NotificationService.sendApplicationAcceptedNotification(
+        jobTitle: jobTitle,
+        ownerName: ownerName,
+        applicantId: applicantId,
+        jobId: jobId,
+      );
+      print('✅ Notificación de solicitud aceptada enviada al trabajador: $applicantId');
+    }
   }
 
   Future<void> rejectApplication(String applicationId) async {

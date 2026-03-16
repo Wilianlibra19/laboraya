@@ -32,6 +32,8 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   String _selectedCategory = 'Limpieza';
   String _paymentType = 'Por trabajo completo';
   String _selectedDuration = '1-2 horas';
+  String _jobType = 'daily'; // 'daily' o 'contract'
+  int? _estimatedDays; // Solo para contratos
   
   // TODO: Implementar "Marcar como urgente" como función de pago premium
   bool _isUrgent = false; // Siempre false por ahora
@@ -221,6 +223,8 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         images: uploadedImageUrls,
         createdAt: DateTime.now(),
         documents: [],
+        jobType: _jobType,
+        estimatedDays: _estimatedDays,
       );
 
       print('💾 Guardando trabajo...');
@@ -483,7 +487,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     isDark: isDark,
                     keyboardType: TextInputType.number,
                   ),
-                  const SizedBox(height: 20), // Aumentado de 16 a 20
+                  const SizedBox(height: 20),
                   _buildDropdown(
                     value: _paymentType,
                     label: 'Tipo de pago',
@@ -493,7 +497,128 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     onChanged: (value) =>
                         setState(() => _paymentType = value ?? ''),
                   ),
-                  const SizedBox(height: 20), // Aumentado de 16 a 20
+                  const SizedBox(height: 20),
+                  // Tipo de trabajo
+                  DropdownButtonFormField<String>(
+                    value: _jobType,
+                    style: TextStyle(
+                      fontSize: 17,
+                      height: 1.4,
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Tipo de trabajo',
+                      labelStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      prefixIcon: const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Icon(Icons.work_outline, size: 26),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 20,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(
+                          color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                          width: 1.5,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: AppColors.primary,
+                          width: 2.5,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'daily',
+                        child: Text('Trabajo Diario'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'contract',
+                        child: Text('Por Contrato'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _jobType = value ?? 'daily';
+                        if (_jobType == 'daily') {
+                          _estimatedDays = null;
+                        }
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  // Si es contrato, mostrar campo de días estimados
+                  if (_jobType == 'contract') ...[
+                    TextFormField(
+                      initialValue: _estimatedDays?.toString() ?? '',
+                      style: const TextStyle(fontSize: 17, height: 1.4),
+                      decoration: InputDecoration(
+                        labelText: 'Días estimados del contrato',
+                        labelStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                        hintText: 'Ej: 5, 10, 30',
+                        prefixIcon: const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Icon(Icons.calendar_month, size: 26),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 20,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                            color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                            color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                            width: 1.5,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: AppColors.primary,
+                            width: 2.5,
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (_jobType == 'contract') {
+                          if (value == null || value.isEmpty) {
+                            return 'Ingresa los días estimados';
+                          }
+                          final days = int.tryParse(value);
+                          if (days == null || days < 1) {
+                            return 'Ingresa un número válido';
+                          }
+                        }
+                        return null;
+                      },
+                      onChanged: (value) {
+                        _estimatedDays = int.tryParse(value);
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                  ],
                   _buildDropdown(
                     value: _selectedDuration,
                     label: 'Duración estimada',

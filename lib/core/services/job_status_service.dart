@@ -101,16 +101,25 @@ class JobStatusService {
       final jobTitle = jobData?['title'] ?? 'un trabajo';
       final workerId = jobData?['acceptedBy'];
       final jobOwnerId = jobData?['createdBy'];
+      final jobType = jobData?['jobType'] ?? 'daily';
       
       if (workerId != null && jobOwnerId != null) {
         final workerDoc = await _firestore.collection('users').doc(workerId).get();
         final workerData = workerDoc.data();
         final workerName = workerData?['name'] ?? 'El trabajador';
         
-        await _firestore.collection('jobs').doc(jobId).update({
+        final updateData = {
           'jobStatus': 'in_progress',
           'startedAt': Timestamp.now(),
-        });
+        };
+        
+        // Si es un contrato, guardar la fecha de inicio del contrato
+        if (jobType == 'contract') {
+          updateData['contractStartDate'] = Timestamp.now();
+          print('📅 Guardando fecha de inicio del contrato');
+        }
+        
+        await _firestore.collection('jobs').doc(jobId).update(updateData);
         
         print('✅ Trabajo iniciado');
         

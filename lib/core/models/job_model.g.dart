@@ -45,13 +45,17 @@ class JobModelAdapter extends TypeAdapter<JobModel> {
       commentWorker: fields[25] as String?,
       ratingClient: fields[26] as double?,
       commentClient: fields[27] as String?,
+      documents: (fields[28] as List).cast<String>(),
+      jobType: fields[29] as String,
+      estimatedDays: fields[30] as int?,
+      contractStartDate: fields[31] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, JobModel obj) {
     writer
-      ..writeByte(28)
+      ..writeByte(32)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -107,7 +111,15 @@ class JobModelAdapter extends TypeAdapter<JobModel> {
       ..writeByte(26)
       ..write(obj.ratingClient)
       ..writeByte(27)
-      ..write(obj.commentClient);
+      ..write(obj.commentClient)
+      ..writeByte(28)
+      ..write(obj.documents)
+      ..writeByte(29)
+      ..write(obj.jobType)
+      ..writeByte(30)
+      ..write(obj.estimatedDays)
+      ..writeByte(31)
+      ..write(obj.contractStartDate);
   }
 
   @override

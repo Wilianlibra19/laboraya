@@ -28,37 +28,6 @@ class NotificationsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notificaciones'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bug_report),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const DebugNotificationsScreen(),
-                ),
-              );
-            },
-            tooltip: 'Debug',
-          ),
-          TextButton(
-            onPressed: () async {
-              // Marcar todas como leídas
-              final batch = FirebaseFirestore.instance.batch();
-              final snapshot = await FirebaseFirestore.instance
-                  .collection('notifications')
-                  .where('userId', isEqualTo: currentUser.id)
-                  .where('isRead', isEqualTo: false)
-                  .get();
-              
-              for (var doc in snapshot.docs) {
-                batch.update(doc.reference, {'isRead': true});
-              }
-              await batch.commit();
-            },
-            child: const Text('Marcar todas como leídas'),
-          ),
-        ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -250,6 +219,45 @@ class NotificationsScreen extends StatelessWidget {
                             builder: (_) => JobDetailScreen(jobId: jobId),
                           ),
                         );
+                      }
+                    },
+                    onLongPress: () async {
+                      // Mostrar diálogo de confirmación para eliminar
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Eliminar notificación'),
+                          content: const Text('¿Deseas eliminar esta notificación?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancelar'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                              ),
+                              child: const Text('Eliminar'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm == true) {
+                        await FirebaseFirestore.instance
+                            .collection('notifications')
+                            .doc(notif.id)
+                            .delete();
+                        
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Notificación eliminada'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
                       }
                     },
                   ),

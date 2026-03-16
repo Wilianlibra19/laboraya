@@ -139,6 +139,12 @@ class JobCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
+              // Mini barra de progreso para contratos en progreso
+              if (job.jobType == 'contract' && 
+                  job.jobStatus == 'in_progress' && 
+                  job.contractStartDate != null && 
+                  job.estimatedDays != null)
+                _buildMiniContractProgress(),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -246,6 +252,62 @@ class JobCard extends StatelessWidget {
               fontSize: 12,
               fontWeight: FontWeight.bold,
               color: textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniContractProgress() {
+    final startDate = job.contractStartDate!;
+    final estimatedDays = job.estimatedDays!;
+    final now = DateTime.now();
+    final daysPassed = now.difference(startDate).inDays;
+    final progress = (daysPassed / estimatedDays).clamp(0.0, 1.0);
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.calendar_today,
+                size: 14,
+                color: Colors.orange,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Día $daysPassed de $estimatedDays',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${(progress * 100).toStringAsFixed(0)}%',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              backgroundColor: Colors.grey.shade200,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                progress >= 1.0 ? Colors.red : Colors.orange,
+              ),
             ),
           ),
         ],

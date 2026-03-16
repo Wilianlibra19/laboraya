@@ -28,6 +28,13 @@ class _MainScreenState extends State<MainScreen> {
   ];
 
   Future<bool> _onWillPop() async {
+    // Si no está en Inicio, ir a Inicio
+    if (_currentIndex != 0) {
+      setState(() => _currentIndex = 0);
+      return false;
+    }
+    
+    // Si está en Inicio, aplicar lógica de doble tap para salir
     final now = DateTime.now();
     
     // Si presionó hace menos de 2 segundos, salir

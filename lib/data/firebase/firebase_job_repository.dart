@@ -154,6 +154,10 @@ class FirebaseJobRepository implements JobRepository {
       commentWorker: data['commentWorker'],
       ratingClient: data['ratingClient']?.toDouble(),
       commentClient: data['commentClient'],
+      // Campos de contrato
+      jobType: data['jobType'] ?? 'daily',
+      estimatedDays: data['estimatedDays'],
+      contractStartDate: (data['contractStartDate'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -200,6 +204,12 @@ class FirebaseJobRepository implements JobRepository {
       'commentWorker': job.commentWorker,
       'ratingClient': job.ratingClient,
       'commentClient': job.commentClient,
+      // Campos de contrato
+      'jobType': job.jobType,
+      'estimatedDays': job.estimatedDays,
+      'contractStartDate': job.contractStartDate != null 
+          ? Timestamp.fromDate(job.contractStartDate!)
+          : null,
     };
   }
 }

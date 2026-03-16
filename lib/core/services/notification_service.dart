@@ -416,6 +416,56 @@ class NotificationService {
     }
   }
 
+  // Enviar notificación cuando aceptan una solicitud de trabajo
+  static Future<void> sendApplicationAcceptedNotification({
+    required String jobTitle,
+    required String ownerName,
+    required String applicantId,
+    String? jobId,
+  }) async {
+    try {
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      
+      // Crear notificación en Firestore
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'userId': applicantId,
+        'title': '¡Solicitud Aceptada! 🎉',
+        'body': '$ownerName aceptó tu solicitud para "$jobTitle"',
+        'type': 'application_accepted',
+        'jobId': jobId,
+        'isRead': false,
+        'createdAt': Timestamp.now(),
+      });
+      
+      print('✅ Notificación de solicitud aceptada guardada en Firestore para: $applicantId');
+      
+      final applicantDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(applicantId)
+          .get();
+      
+      final applicantToken = applicantDoc.data()?['fcmToken'];
+      
+      if (applicantToken != null) {
+        print('📤 Debería enviar notificación push a token: $applicantToken');
+        print('   Título: ¡Solicitud Aceptada! 🎉');
+        print('   Mensaje: $ownerName aceptó tu solicitud para "$jobTitle"');
+      }
+      
+      if (currentUserId == applicantId) {
+        await _showLocalNotification(
+          title: '¡Solicitud Aceptada! 🎉',
+          body: '$ownerName aceptó tu solicitud para "$jobTitle"',
+        );
+        print('✅ Notificación local mostrada al solicitante');
+      } else {
+        print('⏭️ No se muestra notificación local (usuario actual no es el solicitante)');
+      }
+    } catch (e) {
+      print('❌ Error enviando notificación de solicitud aceptada: $e');
+    }
+  }
+
   // Obtener token FCM del dispositivo
   static Future<String?> getToken() async {
     return await _messaging.getToken();

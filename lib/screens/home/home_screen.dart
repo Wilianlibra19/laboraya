@@ -730,23 +730,28 @@ class _CategoryCard extends StatelessWidget {
             );
           },
           borderRadius: BorderRadius.circular(AppSizes.borderRadius),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                CategoryIcons.icons[category] ?? Icons.work,
-                size: 32,
-                color: AppColors.primary,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                category,
-                style: const TextStyle(fontSize: 11),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  CategoryIcons.icons[category] ?? Icons.work,
+                  size: 28,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(height: 6),
+                Flexible(
+                  child: Text(
+                    category,
+                    style: const TextStyle(fontSize: 10),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
