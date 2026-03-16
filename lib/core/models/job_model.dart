@@ -91,6 +91,15 @@ class JobModel extends HiveObject {
   @HiveField(28)
   List<String> documents;
 
+  @HiveField(29)
+  String jobType; // 'daily' o 'contract'
+
+  @HiveField(30)
+  int? estimatedDays; // Solo para contratos
+
+  @HiveField(31)
+  DateTime? contractStartDate; // Fecha real de inicio del contrato
+
   JobModel({
     required this.id,
     required this.title,
@@ -121,6 +130,9 @@ class JobModel extends HiveObject {
     this.ratingClient,
     this.commentClient,
     this.documents = const [],
+    this.jobType = 'daily', // Por defecto es diario
+    this.estimatedDays,
+    this.contractStartDate,
   });
 
   Map<String, dynamic> toJson() => {
@@ -153,6 +165,9 @@ class JobModel extends HiveObject {
         'ratingClient': ratingClient,
         'commentClient': commentClient,
         'documents': documents,
+        'jobType': jobType,
+        'estimatedDays': estimatedDays,
+        'contractStartDate': contractStartDate?.toIso8601String(),
       };
 
   factory JobModel.fromJson(Map<String, dynamic> json) => JobModel(
@@ -197,6 +212,11 @@ class JobModel extends HiveObject {
         ratingClient: json['ratingClient']?.toDouble(),
         commentClient: json['commentClient'],
         documents: List<String>.from(json['documents'] ?? []),
+        jobType: json['jobType'] ?? 'daily',
+        estimatedDays: json['estimatedDays'],
+        contractStartDate: json['contractStartDate'] != null
+            ? DateTime.parse(json['contractStartDate'])
+            : null,
       );
 
   // Crear desde DocumentSnapshot de Firestore
