@@ -4,12 +4,15 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/models/job_model.dart';
 import '../../core/models/user_model.dart';
+import '../../core/models/job_application_model.dart';
 import '../../core/services/job_service.dart';
 import '../../core/services/user_service.dart';
+import '../../core/services/job_application_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../widgets/job/job_progress_bar.dart';
 import '../../widgets/job/job_action_buttons.dart';
+import 'job_applications_screen.dart';
 
 class JobDetailScreen extends StatefulWidget {
   final String jobId;
@@ -106,6 +109,56 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       appBar: AppBar(
         title: const Text('Detalle del Trabajo'),
         actions: [
+          if (isOwner && job!.jobStatus == 'available')
+            StreamBuilder<List<JobApplicationModel>>(
+              stream: JobApplicationService().getJobApplications(widget.jobId),
+              builder: (context, snapshot) {
+                final count = snapshot.data?.length ?? 0;
+                return Stack(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.people),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => JobApplicationsScreen(
+                              jobId: widget.jobId,
+                              jobTitle: job!.title,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    if (count > 0)
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          constraints: const BoxConstraints(
+                            minWidth: 18,
+                            minHeight: 18,
+                          ),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '$count',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.share),
             onPressed: () {},

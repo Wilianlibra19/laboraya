@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/models/job_model.dart';
 import '../../core/models/user_model.dart';
 import '../../core/services/job_status_service.dart';
+import '../../core/services/job_application_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/common/custom_button.dart';
 import '../../screens/chat/chat_screen.dart';
@@ -26,16 +27,53 @@ class JobActionButtons extends StatefulWidget {
 class _JobActionButtonsState extends State<JobActionButtons> {
   bool _isLoading = false;
   final _jobStatusService = JobStatusService();
+  final _applicationService = JobApplicationService();
 
   bool get isOwner => widget.currentUser.id == widget.job.createdBy;
   bool get isWorker => widget.currentUser.id == widget.job.acceptedBy;
 
-  Future<void> _acceptJob() async {
-    final confirm = await showDialog<bool>(
+  Future<void> _applyToJob() async {
+    // Verificar si ya aplicó
+    final hasApplied = await _applicationService.hasUserApplied(
+      widget.job.id,
+      widget.currentUser.id,
+    );
+
+    if (hasApplied) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ya has solicitado este trabajo'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Mostrar diálogo para mensaje
+    final messageController = TextEditingController();
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('¿Aceptar este trabajo?'),
-        content: const Text('Te comprometes a realizar este trabajo.'),
+        title: const Text('Solicitar Trabajo'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Escribe un mensaje para el empleador:'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: messageController,
+              maxLines: 3,
+              maxLength: 200,
+              decoration: const InputDecoration(
+                hintText: 'Ej: Tengo experiencia en este tipo de trabajo...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -43,47 +81,36 @@ class _JobActionButtonsState extends State<JobActionButtons> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Aceptar'),
+            child: const Text('Enviar Solicitud'),
           ),
         ],
       ),
     );
 
-    if (confirm != true) return;
+    if (confirmed != true) return;
 
     setState(() => _isLoading = true);
 
     try {
-      print('🔵 Aceptando trabajo: ${widget.job.id}');
-      print('🔵 Usuario: ${widget.currentUser.id}');
-      
-      await _jobStatusService.acceptJob(widget.job.id, widget.currentUser.id);
-      
-      print('✅ Trabajo aceptado, esperando actualización...');
-      
-      // Esperar un momento para que Firebase se actualice
-      await Future.delayed(const Duration(milliseconds: 1500));
-      
+      await _applicationService.applyToJob(
+        jobId: widget.job.id,
+        applicant: widget.currentUser,
+        message: messageController.text.trim(),
+      );
+
       if (mounted) {
         setState(() => _isLoading = false);
-        
-        print('🔵 Llamando onStatusChanged...');
-        widget.onStatusChanged();
-        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Trabajo aceptado exitosamente'),
+            content: Text('✅ Solicitud enviada exitosamente'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
         );
-        
-        // Cerrar la pantalla actual y volver atrás
-        // La pantalla se actualizará automáticamente con el listener
-        Navigator.of(context).pop();
+        Navigator.pop(context);
       }
     } catch (e) {
-      print('❌ Error aceptando: $e');
+      print('❌ Error enviando solicitud: $e');
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -259,9 +286,10 @@ class _JobActionButtonsState extends State<JobActionButtons> {
           const SizedBox(width: 12),
           Expanded(
             child: CustomButton(
-              text: 'Aceptar',
-              onPressed: _acceptJob,
+              text: 'Solicitar',
+              onPressed: _applyToJob,
               isLoading: _isLoading,
+              icon: Icons.send,
             ),
           ),
         ],

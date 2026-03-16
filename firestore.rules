@@ -22,12 +22,13 @@ service cloud.firestore {
       allow create: if isOwner(userId);
       
       // El dueño puede actualizar su perfil
-      // O cualquier usuario autenticado puede actualizar earnings, rating y completedJobs
+      // O el sistema puede actualizar earnings, rating, completedJobs, totalReviews, monthlyEarnings, totalEarnings
       // (necesario para cuando completan un trabajo)
       allow update: if isOwner(userId) || 
                        (isAuthenticated() && 
                         request.resource.data.diff(resource.data).affectedKeys()
-                          .hasOnly(['earnings', 'rating', 'completedJobs']));
+                          .hasOnly(['earnings', 'rating', 'completedJobs', 'totalReviews', 
+                                   'monthlyEarnings', 'totalEarnings']));
       
       // Solo el dueño puede eliminar su perfil
       allow delete: if isOwner(userId);
@@ -100,6 +101,34 @@ service cloud.firestore {
       // Solo el destinatario puede eliminar su notificación
       allow delete: if isAuthenticated() && 
                        resource.data.userId == request.auth.uid;
+    }
+    
+    // JOB_APPLICATIONS - Solicitudes de Trabajo
+    match /job_applications/{applicationId} {
+      // Función auxiliar para obtener el dueño del trabajo
+      function getJobOwner(jobId) {
+        return get(/databases/$(database)/documents/jobs/$(jobId)).data.createdBy;
+      }
+      
+      // Cualquier usuario autenticado puede crear una solicitud
+      allow create: if isAuthenticated() && 
+                       request.resource.data.applicantId == request.auth.uid;
+      
+      // El solicitante y el dueño del trabajo pueden leer la solicitud
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.applicantId ||
+        request.auth.uid == getJobOwner(resource.data.jobId)
+      );
+      
+      // Solo el dueño del trabajo puede actualizar (aceptar/rechazar)
+      allow update: if isAuthenticated() &&
+        request.auth.uid == getJobOwner(resource.data.jobId);
+      
+      // El dueño del trabajo o el solicitante pueden eliminar
+      allow delete: if isAuthenticated() && (
+        request.auth.uid == getJobOwner(resource.data.jobId) ||
+        request.auth.uid == resource.data.applicantId
+      );
     }
   }
 }

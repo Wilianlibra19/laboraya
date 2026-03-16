@@ -125,30 +125,6 @@ class NotificationsScreen extends StatelessWidget {
                       color: Colors.grey[600],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Usuario ID: ${currentUser.id}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[400],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      await NotificationCleanupService.createTestNotification(currentUser.id);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('✅ Notificación de prueba creada'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.add),
-                    label: const Text('Crear Notificación de Prueba'),
-                  ),
                 ],
               ),
             );
