@@ -6,6 +6,7 @@ import '../../utils/constants.dart';
 import 'change_password_screen.dart';
 import 'notification_settings_screen.dart';
 import 'privacy_screen.dart';
+import 'blocked_users_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -111,20 +112,9 @@ class SettingsScreen extends StatelessWidget {
                 icon: Icons.block,
                 title: 'Usuarios bloqueados',
                 onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Usuarios bloqueados'),
-                      content: const Text(
-                        'No tienes usuarios bloqueados.\n\nPuedes bloquear usuarios desde su perfil.',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cerrar'),
-                        ),
-                      ],
-                    ),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BlockedUsersScreen()),
                   );
                 },
               ),

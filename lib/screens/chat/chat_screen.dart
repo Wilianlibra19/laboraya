@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -269,28 +270,41 @@ class _ChatScreenState extends State<ChatScreen> {
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${_otherUser?.name} ha sido bloqueado'),
-                  backgroundColor: Colors.orange,
-                  action: SnackBarAction(
-                    label: 'Deshacer',
-                    textColor: Colors.white,
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Bloqueo cancelado'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              );
-              // Aquí se implementaría el bloqueo real en Firebase
-              // await _blockUser(_otherUser!.id);
+              
+              final currentUser = context.read<UserService>().currentUser;
+              if (currentUser == null || _otherUser == null) return;
+
+              try {
+                // Guardar bloqueo en Firebase
+                await FirebaseFirestore.instance.collection('blocked_users').add({
+                  'blockerId': currentUser.id,
+                  'blockedUserId': _otherUser!.id,
+                  'blockedAt': Timestamp.now(),
+                });
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${_otherUser?.name} ha sido bloqueado'),
+                      backgroundColor: Colors.orange,
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                  // Volver atrás
+                  Navigator.pop(context);
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al bloquear: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Bloquear'),
