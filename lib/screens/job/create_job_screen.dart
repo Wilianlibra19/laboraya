@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:geocoding/geocoding.dart';
 import 'dart:io';
 import '../../core/models/job_model.dart';
@@ -12,7 +11,6 @@ import '../../core/services/location_service.dart';
 import '../../core/services/cloudinary_service.dart';
 import '../../data/mock/mock_data.dart';
 import '../../utils/constants.dart';
-import '../../widgets/common/custom_button.dart';
 
 class CreateJobScreen extends StatefulWidget {
   const CreateJobScreen({super.key});
@@ -26,17 +24,11 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _paymentController = TextEditingController();
-  final _durationController = TextEditingController();
   final _addressController = TextEditingController();
 
-  String _selectedCategory = 'Limpieza';
+  String _selectedCategory = '';
   String _paymentType = 'Por trabajo completo';
-  String _selectedDuration = '1-2 horas';
-  String _jobType = 'daily'; // 'daily' o 'contract'
-  int? _estimatedDays; // Solo para contratos
-  
-  // TODO: Implementar "Marcar como urgente" como función de pago premium
-  bool _isUrgent = false; // Siempre false por ahora
+  String _selectedDuration = 'Corto plazo (1-7 días)';
   
   bool _isLoading = false;
   bool _isLoadingLocation = false;
@@ -45,17 +37,10 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   double? _currentLongitude;
 
   @override
-  void initState() {
-    super.initState();
-    _durationController.text = _selectedDuration;
-  }
-
-  @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     _paymentController.dispose();
-    _durationController.dispose();
     _addressController.dispose();
     super.dispose();
   }
@@ -92,7 +77,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           _currentLongitude = position.longitude;
         });
 
-        // Obtener la dirección desde las coordenadas (geocodificación inversa)
         try {
           final placemarks = await placemarkFromCoordinates(
             position.latitude,
@@ -101,48 +85,27 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           
           if (placemarks.isNotEmpty) {
             final place = placemarks.first;
-            
-            // Construir la dirección
             String address = '';
             
             if (place.street != null && place.street!.isNotEmpty) {
               address += place.street!;
             }
-            
             if (place.subThoroughfare != null && place.subThoroughfare!.isNotEmpty) {
               address += ' ${place.subThoroughfare}';
             }
-            
             if (place.locality != null && place.locality!.isNotEmpty) {
               if (address.isNotEmpty) address += ', ';
               address += place.locality!;
             }
-            
-            if (place.subAdministrativeArea != null && place.subAdministrativeArea!.isNotEmpty) {
-              if (address.isNotEmpty) address += ', ';
-              address += place.subAdministrativeArea!;
-            }
-            
-            if (place.country != null && place.country!.isNotEmpty) {
-              if (address.isNotEmpty) address += ', ';
-              address += place.country!;
-            }
-            
-            // Si no se pudo construir una dirección, usar coordenadas
             if (address.isEmpty) {
               address = '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
             }
             
-            // Actualizar el campo de dirección
             setState(() {
               _addressController.text = address;
             });
-            
-            print('📍 Dirección obtenida: $address');
           }
         } catch (e) {
-          print('⚠️ Error obteniendo dirección: $e');
-          // Si falla la geocodificación, usar coordenadas
           setState(() {
             _addressController.text = '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
           });
@@ -151,18 +114,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('✅ Ubicación y dirección obtenidas'),
+              content: Text('✅ Ubicación obtenida'),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('No se pudo obtener la ubicación. Verifica los permisos.'),
-              backgroundColor: Colors.red,
             ),
           );
         }
@@ -171,7 +125,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al obtener ubicación: $e'),
+            content: Text('Error: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -192,17 +146,12 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         throw Exception('Usuario no autenticado');
       }
 
-      // Subir imágenes a Cloudinary en paralelo (más rápido)
       List<String> uploadedImageUrls = [];
       if (_selectedImages.isNotEmpty) {
-        print('📤 Subiendo ${_selectedImages.length} imágenes...');
-        
         uploadedImageUrls = await CloudinaryService.uploadMultipleImages(
           imagePaths: _selectedImages,
           folder: 'laboraya/jobs',
         );
-        
-        print('✅ Imágenes subidas');
       }
 
       final job = JobModel(
@@ -212,31 +161,27 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         category: _selectedCategory,
         payment: double.parse(_paymentController.text),
         paymentType: _paymentType,
-        workersNeeded: 1, // Siempre 1 persona
-        duration: _durationController.text,
+        workersNeeded: 1,
+        duration: _selectedDuration,
         latitude: _currentLatitude ?? -12.0464,
         longitude: _currentLongitude ?? -77.0428,
         address: _addressController.text,
         createdBy: currentUser.id,
         status: 'available',
-        isUrgent: _isUrgent,
+        isUrgent: false,
         images: uploadedImageUrls,
         createdAt: DateTime.now(),
         documents: [],
-        jobType: _jobType,
-        estimatedDays: _estimatedDays,
+        jobType: 'daily',
       );
 
-      print('💾 Guardando trabajo...');
       await context.read<JobService>().createJob(job);
-      print('✅ Trabajo guardado');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('✅ Trabajo publicado'),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 1),
           ),
         );
         Navigator.pop(context, true);
@@ -257,719 +202,443 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDark ? Colors.grey[850] : Colors.white;
 
     return Scaffold(
-      backgroundColor: isDark ? Colors.grey[900] : Colors.grey[50],
-      appBar: AppBar(
-        title: const Text('Publicar Trabajo'),
-        elevation: 0,
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Información Básica
-            _buildCard(
-              cardColor: cardColor!,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader(
-                    icon: Icons.info_outline,
-                    title: 'Información Básica',
-                    color: Colors.blue,
+      body: Stack(
+        children: [
+          // Header azul con gradiente
+          Container(
+            height: 200,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.primary,
+                  AppColors.primary.withOpacity(0.7),
+                ],
+              ),
+            ),
+          ),
+          
+          // Contenido
+          SafeArea(
+            child: Column(
+              children: [
+                // AppBar personalizado
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Publicar Trabajo',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 20),
-                  _buildTextField(
-                    controller: _titleController,
-                    label: 'Título del trabajo',
-                    icon: Icons.work,
-                    isDark: isDark,
-                  ),
-                  const SizedBox(height: 20), // Aumentado de 16 a 20
-                  // Categoría con autocompletado
-                  Autocomplete<String>(
-                    initialValue: TextEditingValue(text: _selectedCategory),
-                    optionsBuilder: (TextEditingValue textEditingValue) {
-                      // NO mostrar opciones si el campo está vacío
-                      if (textEditingValue.text.trim().isEmpty) {
-                        return const Iterable<String>.empty();
-                      }
-                      // Filtrar categorías que coincidan
-                      return MockData.getCategories().where((String option) {
-                        return option.toLowerCase().contains(
-                          textEditingValue.text.toLowerCase(),
-                        );
-                      });
-                    },
-                    onSelected: (String selection) {
-                      setState(() {
-                        _selectedCategory = selection;
-                      });
-                    },
-                    fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
-                      return TextFormField(
-                        controller: controller,
-                        focusNode: focusNode,
-                        decoration: InputDecoration(
-                          labelText: 'Categoría *',
-                          hintText: 'Escribe para buscar (ej: Plomero, Pintor, Ayudante)...',
-                          helperText: 'Empieza a escribir para ver opciones',
-                          helperStyle: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                          prefixIcon: const Icon(Icons.category),
-                          suffixIcon: controller.text.isEmpty 
-                              ? const Icon(Icons.search)
-                              : IconButton(
-                                  icon: const Icon(Icons.clear),
-                                  onPressed: () {
-                                    controller.clear();
-                                    setState(() {
-                                      _selectedCategory = '';
-                                    });
-                                  },
-                                ),
-                          filled: true,
-                          fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                ),
+                
+                // Contenido con scroll
+                Expanded(
+                  child: Form(
+                    key: _formKey,
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                      children: [
+                        // Tarjeta: Información Básica
+                        _buildSectionCard(
+                          isDark: isDark,
+                          icon: Icons.info_outline,
+                          iconColor: AppColors.primary,
+                          title: 'Información Básica',
+                          children: [
+                            _buildCardTextField(
+                              controller: _titleController,
+                              label: 'Título del trabajo',
+                              icon: Icons.work,
+                              isDark: isDark,
                             ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: AppColors.primary,
-                              width: 2,
+                            const SizedBox(height: 16),
+                            // Categoría con Autocomplete
+                            Autocomplete<String>(
+                              initialValue: TextEditingValue(text: _selectedCategory),
+                              optionsBuilder: (TextEditingValue textEditingValue) {
+                                if (textEditingValue.text.trim().isEmpty) {
+                                  return const Iterable<String>.empty();
+                                }
+                                return MockData.getCategories().where((String option) {
+                                  return option.toLowerCase().contains(
+                                    textEditingValue.text.toLowerCase(),
+                                  );
+                                });
+                              },
+                              onSelected: (String selection) {
+                                setState(() {
+                                  _selectedCategory = selection;
+                                });
+                              },
+                              fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Colors.grey[850] : Colors.grey[50],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: TextFormField(
+                                    controller: controller,
+                                    focusNode: focusNode,
+                                    style: const TextStyle(fontSize: 15),
+                                    decoration: InputDecoration(
+                                      labelText: 'Categoría',
+                                      hintText: 'Buscar categoría...',
+                                      prefixIcon: Icon(
+                                        _selectedCategory.isEmpty 
+                                            ? Icons.search
+                                            : (CategoryIcons.icons[_selectedCategory] ?? Icons.work),
+                                        color: _selectedCategory.isEmpty ? Colors.grey[600] : AppColors.primary,
+                                        size: 22,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      filled: true,
+                                      fillColor: isDark ? Colors.grey[850] : Colors.grey[50],
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    ),
+                                    onEditingComplete: onEditingComplete,
+                                    onChanged: (value) {
+                                      // Actualizar el icono cuando cambia el texto
+                                      if (MockData.getCategories().contains(value)) {
+                                        setState(() {
+                                          _selectedCategory = value;
+                                        });
+                                      } else if (value.isEmpty) {
+                                        setState(() {
+                                          _selectedCategory = '';
+                                        });
+                                      }
+                                    },
+                                    validator: (value) {
+                                      if (value == null || value.trim().isEmpty) {
+                                        return 'Selecciona una categoría';
+                                      }
+                                      if (!MockData.getCategories().contains(value.trim())) {
+                                        return 'Selecciona una categoría válida';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                );
+                              },
+                              optionsViewBuilder: (context, onSelected, options) {
+                                return Align(
+                                  alignment: Alignment.topLeft,
+                                  child: Material(
+                                    elevation: 8,
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      constraints: const BoxConstraints(maxHeight: 250),
+                                      width: MediaQuery.of(context).size.width - 72,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        color: isDark ? Colors.grey[850] : Colors.white,
+                                      ),
+                                      child: ListView.builder(
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                        shrinkWrap: true,
+                                        itemCount: options.length,
+                                        itemBuilder: (context, index) {
+                                          final option = options.elementAt(index);
+                                          return ListTile(
+                                            dense: true,
+                                            leading: Icon(
+                                              CategoryIcons.icons[option] ?? Icons.work,
+                                              size: 20,
+                                              color: AppColors.primary,
+                                            ),
+                                            title: Text(
+                                              option,
+                                              style: const TextStyle(fontSize: 14),
+                                            ),
+                                            onTap: () {
+                                              onSelected(option);
+                                            },
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: Colors.red,
-                              width: 2,
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Tarjeta: Descripción
+                        _buildSectionCard(
+                          isDark: isDark,
+                          icon: Icons.description,
+                          iconColor: AppColors.primary,
+                          title: 'Descripción',
+                          children: [
+                            _buildCardTextField(
+                              controller: _descriptionController,
+                              label: 'Agrega una descripción del trabajo...',
+                              icon: Icons.edit,
+                              isDark: isDark,
+                              maxLines: 4,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Sección: Pago (fuera de tarjeta)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4, bottom: 12),
+                          child: Text(
+                            'Pago',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
                             ),
                           ),
                         ),
-                        onEditingComplete: onEditingComplete,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Selecciona una categoría';
-                          }
-                          // Validar que la categoría esté en la lista
-                          if (!MockData.getCategories().contains(value.trim())) {
-                            return 'Selecciona una categoría válida de la lista';
-                          }
-                          return null;
-                        },
-                      );
-                    },
-                    optionsViewBuilder: (context, onSelected, options) {
-                      return Align(
-                        alignment: Alignment.topLeft,
-                        child: Material(
-                          elevation: 8,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            constraints: const BoxConstraints(maxHeight: 250),
-                            width: MediaQuery.of(context).size.width - 48,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              color: isDark ? Colors.grey[850] : Colors.white,
-                            ),
-                            child: options.isEmpty
-                                ? Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: isDark ? Colors.grey[900] : Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 15,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Monto',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
                                       children: [
-                                        Icon(
-                                          Icons.search_off,
-                                          size: 48,
-                                          color: Colors.grey[400],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'No se encontraron categorías',
-                                          style: TextStyle(
-                                            color: Colors.grey[600],
-                                            fontSize: 14,
+                                        Icon(Icons.payments_outlined, color: AppColors.primary, size: 24),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: TextFormField(
+                                            controller: _paymentController,
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                              color: isDark ? Colors.white : Colors.black87,
+                                            ),
+                                            keyboardType: TextInputType.number,
+                                            decoration: const InputDecoration(
+                                              hintText: 'S/ 0.00',
+                                              border: InputBorder.none,
+                                              isDense: true,
+                                              contentPadding: EdgeInsets.zero,
+                                            ),
+                                            validator: (value) => value?.isEmpty ?? true ? 'Requerido' : null,
                                           ),
                                         ),
                                       ],
                                     ),
-                                  )
-                                : ListView.builder(
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                    shrinkWrap: true,
-                                    itemCount: options.length,
-                                    itemBuilder: (context, index) {
-                                      final option = options.elementAt(index);
-                                      return ListTile(
-                                        dense: true,
-                                        leading: Icon(
-                                          CategoryIcons.icons[option] ?? Icons.work,
-                                          size: 20,
-                                          color: AppColors.primary,
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              flex: 3,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: isDark ? Colors.grey[900] : Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 15,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Tipo',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.payment_outlined, color: AppColors.primary, size: 24),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: DropdownButtonFormField<String>(
+                                            value: _paymentType,
+                                            decoration: const InputDecoration(
+                                              border: InputBorder.none,
+                                              isDense: true,
+                                              contentPadding: EdgeInsets.zero,
+                                            ),
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                              color: isDark ? Colors.white : Colors.black87,
+                                            ),
+                                            dropdownColor: isDark ? Colors.grey[850] : Colors.white,
+                                            items: const [
+                                              DropdownMenuItem(value: 'Por trabajo completo', child: Text('Por trabajo completo')),
+                                              DropdownMenuItem(value: 'Por día', child: Text('Por día')),
+                                              DropdownMenuItem(value: 'Por hora', child: Text('Por hora')),
+                                            ],
+                                            onChanged: (value) => setState(() => _paymentType = value!),
+                                          ),
                                         ),
-                                        title: Text(
-                                          option,
-                                          style: const TextStyle(fontSize: 14),
-                                        ),
-                                        onTap: () {
-                                          onSelected(option);
-                                        },
-                                      );
-                                    },
-                                  ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20), // Aumentado de 16 a 20
-
-            // Descripción
-            _buildCard(
-              cardColor: cardColor,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader(
-                    icon: Icons.description_outlined,
-                    title: 'Descripción',
-                    color: Colors.green,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildTextField(
-                    controller: _descriptionController,
-                    label: 'Descripción',
-                    hint: 'Describe el trabajo en detalle...',
-                    icon: Icons.edit,
-                    isDark: isDark,
-                    maxLines: 5,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20), // Aumentado de 16 a 20
-
-            // Pago y Duración
-            _buildCard(
-              cardColor: cardColor,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader(
-                    icon: Icons.payments_outlined,
-                    title: 'Pago y Duración',
-                    color: Colors.orange,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildTextField(
-                    controller: _paymentController,
-                    label: 'Pago (S/)',
-                    icon: Icons.attach_money,
-                    isDark: isDark,
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildDropdown(
-                    value: _paymentType,
-                    label: 'Tipo de pago',
-                    icon: Icons.payment,
-                    isDark: isDark,
-                    items: ['Por trabajo completo', 'Por día', 'Por hora'],
-                    onChanged: (value) =>
-                        setState(() => _paymentType = value ?? ''),
-                  ),
-                  const SizedBox(height: 20),
-                  // Tipo de trabajo
-                  DropdownButtonFormField<String>(
-                    value: _jobType,
-                    style: TextStyle(
-                      fontSize: 17,
-                      height: 1.4,
-                      color: isDark ? Colors.white : Colors.black,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Tipo de trabajo',
-                      labelStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                      prefixIcon: const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Icon(Icons.work_outline, size: 26),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 20,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(
-                          color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(
-                          color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-                          width: 1.5,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(
-                          color: AppColors.primary,
-                          width: 2.5,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'daily',
-                        child: Text('Trabajo Diario'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'contract',
-                        child: Text('Por Contrato'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _jobType = value ?? 'daily';
-                        if (_jobType == 'daily') {
-                          _estimatedDays = null;
-                        }
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  // Si es contrato, mostrar campo de días estimados
-                  if (_jobType == 'contract') ...[
-                    TextFormField(
-                      initialValue: _estimatedDays?.toString() ?? '',
-                      style: const TextStyle(fontSize: 17, height: 1.4),
-                      decoration: InputDecoration(
-                        labelText: 'Días estimados del contrato',
-                        labelStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                        hintText: 'Ej: 5, 10, 30',
-                        prefixIcon: const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Icon(Icons.calendar_month, size: 26),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 20,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(
-                            color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(
-                            color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-                            width: 1.5,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: AppColors.primary,
-                            width: 2.5,
-                          ),
-                        ),
-                        filled: true,
-                        fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
-                      ),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (_jobType == 'contract') {
-                          if (value == null || value.isEmpty) {
-                            return 'Ingresa los días estimados';
-                          }
-                          final days = int.tryParse(value);
-                          if (days == null || days < 1) {
-                            return 'Ingresa un número válido';
-                          }
-                        }
-                        return null;
-                      },
-                      onChanged: (value) {
-                        _estimatedDays = int.tryParse(value);
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-                  _buildDropdown(
-                    value: _selectedDuration,
-                    label: 'Duración estimada',
-                    icon: Icons.access_time,
-                    isDark: isDark,
-                    items: [
-                      '1-2 horas',
-                      '3-4 horas',
-                      'Medio día (4-6 horas)',
-                      'Día completo (8 horas)',
-                      '2-3 días',
-                      '1 semana',
-                      '2 semanas',
-                      '1 mes',
-                      'Más de 1 mes',
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedDuration = value ?? '1-2 horas';
-                        _durationController.text = _selectedDuration;
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20), // Aumentado de 16 a 20
-
-            // Ubicación
-            _buildCard(
-              cardColor: cardColor,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader(
-                    icon: Icons.location_on_outlined,
-                    title: 'Ubicación',
-                    color: Colors.red,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildTextField(
-                    controller: _addressController,
-                    label: 'Dirección',
-                    icon: Icons.location_on,
-                    isDark: isDark,
-                  ),
-                  const SizedBox(height: 20), // Aumentado de 16 a 20
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _isLoadingLocation ? null : _getCurrentLocation,
-                      icon: _isLoadingLocation
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.my_location),
-                      label: Text(
-                        _currentLatitude != null
-                            ? 'Ubicación obtenida ✓'
-                            : 'Usar mi ubicación actual',
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _currentLatitude != null
-                            ? Colors.green
-                            : AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (_currentLatitude != null) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: Colors.green.withOpacity(0.3),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.check_circle,
-                            color: Colors.green,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Coordenadas: ${_currentLatitude!.toStringAsFixed(4)}, ${_currentLongitude!.toStringAsFixed(4)}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.green,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 20), // Aumentado de 16 a 20
-
-            // Fotos del Trabajo
-            _buildCard(
-              cardColor: cardColor,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader(
-                    icon: Icons.photo_camera_outlined,
-                    title: 'Fotos del Trabajo',
-                    color: Colors.purple,
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.grey[800] : Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.info_outline,
-                              size: 16,
-                              color: Colors.grey[600],
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Máximo 5 fotos',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _selectedImages.length >= 5
-                                    ? Colors.red.withOpacity(0.1)
-                                    : AppColors.primary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${_selectedImages.length}/5',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: _selectedImages.length >= 5
-                                      ? Colors.red
-                                      : AppColors.primary,
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        if (_selectedImages.isEmpty)
-                          Column(
-                            children: [
-                              Icon(
-                                Icons.add_photo_alternate_outlined,
-                                size: 56,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'No hay fotos seleccionadas',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          )
-                        else
-                          SizedBox(
-                            height: 100,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: _selectedImages.length,
-                              itemBuilder: (context, index) {
-                                return Container(
-                                  width: 100,
-                                  margin: const EdgeInsets.only(right: 8),
-                                  child: Stack(
-                                    children: [
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(10),
-                                        child: Image.file(
-                                          File(_selectedImages[index]),
-                                          width: 100,
-                                          height: 100,
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
-                                      Positioned(
-                                        top: 4,
-                                        right: 4,
-                                        child: GestureDetector(
-                                          onTap: () => _removeImage(index),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(6),
-                                            decoration: const BoxDecoration(
-                                              color: Colors.red,
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: const Icon(
-                                              Icons.close,
-                                              color: Colors.white,
-                                              size: 16,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed:
-                                _selectedImages.length >= 5 ? null : _pickImages,
-                            icon: const Icon(Icons.add_photo_alternate),
-                            label: Text(
-                              _selectedImages.isEmpty
-                                  ? 'Agregar Fotos'
-                                  : 'Agregar Más Fotos',
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.purple,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                        const SizedBox(height: 24),
+
+                        // Sección: Duración (fuera de tarjeta)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4, bottom: 12),
+                          child: Text(
+                            'Duración',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
                             ),
                           ),
                         ),
+                        _buildDurationOptions(isDark),
+                        const SizedBox(height: 24),
+
+                        // Tarjeta: Ubicación
+                        _buildSectionCard(
+                          isDark: isDark,
+                          icon: Icons.location_on,
+                          iconColor: AppColors.primary,
+                          title: 'Ubicación',
+                          children: [
+                            _buildCardTextField(
+                              controller: _addressController,
+                              label: 'Dirección',
+                              icon: Icons.location_on_outlined,
+                              isDark: isDark,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildLocationButton(isDark),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Tarjeta: Fotos
+                        _buildSectionCard(
+                          isDark: isDark,
+                          icon: Icons.photo_camera,
+                          iconColor: AppColors.primary,
+                          title: 'Fotos',
+                          children: [
+                            _buildPhotoSection(isDark),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Botón publicar
+                        _buildPublishButton(isDark),
                       ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(height: 20), // Aumentado de 16 a 20
-
-            // Botón publicar
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: CustomButton(
-                text: 'Publicar Trabajo',
-                onPressed: _createJob,
-                isLoading: _isLoading,
-                icon: Icons.check_circle_outline,
-              ),
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildSectionHeader({
+  Widget _buildSectionCard({
+    required bool isDark,
     required IconData icon,
+    required Color iconColor,
     required String title,
-    required Color color,
-  }) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: color, size: 24),
-        ),
-        const SizedBox(width: 12),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCard({
-    required Color cardColor,
-    required Widget child,
+    required List<Widget> children,
   }) {
     return Container(
-      padding: const EdgeInsets.all(24), // Aumentado de 20 a 24
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
+        color: isDark ? Colors.grey[900] : Colors.white,
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
             blurRadius: 15,
-            offset: const Offset(0, 2),
-            spreadRadius: 1,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: child,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: iconColor, size: 24),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: iconColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          ...children,
+        ],
+      ),
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildCardTextField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
@@ -978,124 +647,294 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     TextInputType? keyboardType,
     int maxLines = 1,
   }) {
-    return TextFormField(
-      controller: controller,
-      style: const TextStyle(fontSize: 17, height: 1.4), // Aumentado y agregado height
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-        hintText: hint,
-        hintStyle: TextStyle(fontSize: 15, color: Colors.grey[400]),
-        prefixIcon: Padding(
-          padding: const EdgeInsets.all(16), // Aumentado de 14 a 16
-          child: Icon(icon, size: 26), // Aumentado de 24 a 26
-        ),
-        alignLabelWithHint: maxLines > 1,
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 24, // Aumentado de 20 a 24
-          vertical: maxLines > 1 ? 24 : 20, // Aumentado de 20/18 a 24/20
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14), // Aumentado de 12 a 14
-          borderSide: BorderSide(
-            color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-            width: 1.5,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: AppColors.primary,
-            width: 2.5,
-          ),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Colors.red,
-            width: 1.5,
-          ),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Colors.red,
-            width: 2.5,
-          ),
-        ),
-        filled: true,
-        fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey[850] : Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
       ),
-      keyboardType: keyboardType,
-      maxLines: maxLines,
-      minLines: maxLines > 1 ? 3 : 1,
-      validator: (value) =>
-          value?.isEmpty ?? true ? 'Campo requerido' : null,
+      child: TextFormField(
+        controller: controller,
+        style: const TextStyle(fontSize: 15),
+        maxLines: maxLines,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          prefixIcon: Icon(icon, color: Colors.grey[600], size: 22),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: isDark ? Colors.grey[850] : Colors.grey[50],
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+        validator: (value) => value?.isEmpty ?? true ? 'Campo requerido' : null,
+      ),
     );
   }
 
-  Widget _buildDropdown<T>({
-    required T value,
+  Widget _buildCardDropdown({
+    required String value,
     required String label,
+    required String hint,
     required IconData icon,
     required bool isDark,
-    required List<T> items,
-    required void Function(T?) onChanged,
+    required List<String> items,
+    required void Function(String?) onChanged,
   }) {
-    return DropdownButtonFormField<T>(
-      value: value,
-      style: TextStyle(
-        fontSize: 17, // Aumentado de 16 a 17
-        height: 1.4,
-        color: isDark ? Colors.white : Colors.black,
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey[850] : Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
       ),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-        prefixIcon: Padding(
-          padding: const EdgeInsets.all(16), // Aumentado de 14 a 16
-          child: Icon(icon, size: 26), // Aumentado de 24 a 26
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 24, // Aumentado de 20 a 24
-          vertical: 20, // Aumentado de 18 a 20
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14), // Aumentado de 12 a 14
-          borderSide: BorderSide(
-            color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+      child: DropdownButtonFormField<String>(
+        value: value,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          prefixIcon: Icon(icon, color: Colors.grey[600], size: 22),
+          suffixIcon: const Icon(Icons.arrow_forward_ios, size: 16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
           ),
+          filled: true,
+          fillColor: isDark ? Colors.grey[850] : Colors.grey[50],
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-            width: 1.5,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: AppColors.primary,
-            width: 2.5,
-          ),
-        ),
-        filled: true,
-        fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
+        items: items.map((item) => DropdownMenuItem(value: item, child: Text(item, style: const TextStyle(fontSize: 15)))).toList(),
+        onChanged: onChanged,
       ),
-      items: items
-          .map((item) => DropdownMenuItem<T>(
-                value: item,
-                child: Text(item.toString()),
-              ))
-          .toList(),
-      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildDurationOptions(bool isDark) {
+    final durations = [
+      {'value': 'Corto plazo (1-7 días)', 'label': 'Corto plazo', 'subtitle': '1-7 días', 'icon': Icons.flash_on},
+      {'value': 'Mediano plazo (1-4 semanas)', 'label': 'Mediano plazo', 'subtitle': '1-4 semanas', 'icon': Icons.calendar_today},
+      {'value': 'Largo plazo (1+ mes)', 'label': 'Largo plazo', 'subtitle': '1+ mes', 'icon': Icons.event_available},
+    ];
+
+    return Column(
+      children: durations.map((duration) {
+        final isSelected = _selectedDuration == duration['value'];
+        return GestureDetector(
+          onTap: () => setState(() => _selectedDuration = duration['value'] as String),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey[900] : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isSelected ? AppColors.primary : Colors.transparent,
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 15,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isSelected 
+                        ? AppColors.primary 
+                        : AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    duration['icon'] as IconData,
+                    color: isSelected ? Colors.white : AppColors.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        duration['label'] as String,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: isSelected ? AppColors.primary : (isDark ? Colors.white : Colors.black87),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        duration['subtitle'] as String,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isSelected)
+                  const Icon(Icons.check_circle, color: AppColors.primary, size: 26),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildLocationButton(bool isDark) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: _isLoadingLocation ? null : _getCurrentLocation,
+        icon: _isLoadingLocation
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              )
+            : Icon(_currentLatitude != null ? Icons.check_circle : Icons.my_location),
+        label: Text(_currentLatitude != null ? 'Ubicación obtenida' : 'Usar mi ubicación'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _currentLatitude != null ? Colors.green : AppColors.primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoSection(bool isDark) {
+    return Column(
+      children: [
+        if (_selectedImages.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey[850] : Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.add_photo_alternate_outlined, size: 40, color: Colors.grey[400]),
+                const SizedBox(height: 8),
+                Text('Sin fotos', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+              ],
+            ),
+          )
+        else
+          SizedBox(
+            height: 90,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _selectedImages.length,
+              itemBuilder: (context, index) {
+                return Container(
+                  width: 90,
+                  margin: const EdgeInsets.only(right: 8),
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          File(_selectedImages[index]),
+                          width: 90,
+                          height: 90,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: GestureDetector(
+                          onTap: () => _removeImage(index),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.close, color: Colors.white, size: 14),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _selectedImages.length >= 5 ? null : _pickImages,
+            icon: const Icon(Icons.add_photo_alternate, size: 20),
+            label: Text(
+              _selectedImages.isEmpty ? 'Agregar fotos' : 'Agregar más (${_selectedImages.length}/5)',
+              style: const TextStyle(fontSize: 14),
+            ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              side: BorderSide(color: AppColors.primary.withOpacity(0.5)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPublishButton(bool isDark) {
+    return Container(
+      width: double.infinity,
+      height: 54,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, Color(0xFF1565C0)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _createJob,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        child: _isLoading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+              )
+            : const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.check_circle_outline, size: 22),
+                  SizedBox(width: 10),
+                  Text(
+                    'Publicar Trabajo',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 }
