@@ -24,6 +24,22 @@ class UserService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> refreshCurrentUser() async {
+    if (_currentUser == null) return;
+    
+    try {
+      print('🔄 Refrescando datos del usuario: ${_currentUser!.id}');
+      final updatedUser = await _repository.getUserById(_currentUser!.id);
+      if (updatedUser != null) {
+        _currentUser = updatedUser;
+        notifyListeners();
+        print('✅ Usuario actualizado: ganancias=${updatedUser.totalEarnings}');
+      }
+    } catch (e) {
+      debugPrint('Error refreshing current user: $e');
+    }
+  }
+
   Future<void> login(String userId) async {
     try {
       await _repository.setCurrentUser(userId);

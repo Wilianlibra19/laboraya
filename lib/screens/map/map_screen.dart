@@ -54,22 +54,115 @@ class _MapScreenState extends State<MapScreen> {
     
     return jobs.map((job) {
       return Marker(
+        key: ValueKey('marker_${job.id}'),
         point: LatLng(job.latitude, job.longitude),
-        width: 70,
-        height: 70,
+        width: 80,
+        height: 80,
         child: GestureDetector(
           onTap: () => setState(() => _selectedJob = job),
-          child: Image.asset(
-            'assets/icons/pingmapa.png',
-            width: 70,
-            height: 70,
-            // Color celeste para trabajos normales, rojo para urgentes
-            color: job.isUrgent ? AppColors.urgent : const Color(0xFF00BCD4), // Celeste/Cyan
-            colorBlendMode: BlendMode.modulate,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Pin del mapa
+              Icon(
+                Icons.location_on,
+                size: 80,
+                color: job.isUrgent ? AppColors.urgent : AppColors.primary,
+              ),
+              // Icono de la categoría
+              Positioned(
+                top: 12,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    _getCategoryIcon(job.category),
+                    size: 24,
+                    color: job.isUrgent ? AppColors.urgent : AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       );
     }).toList();
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'limpieza':
+        return Icons.cleaning_services;
+      case 'construcción':
+        return Icons.construction;
+      case 'electricidad':
+        return Icons.electrical_services;
+      case 'plomería':
+        return Icons.plumbing;
+      case 'jardinería':
+        return Icons.yard;
+      case 'pintura':
+        return Icons.format_paint;
+      case 'carpintería':
+        return Icons.carpenter;
+      case 'mudanza':
+        return Icons.local_shipping;
+      case 'reparaciones':
+        return Icons.build;
+      case 'tecnología':
+        return Icons.computer;
+      case 'cocina':
+        return Icons.restaurant;
+      case 'cuidado':
+        return Icons.favorite;
+      case 'educación':
+        return Icons.school;
+      case 'transporte':
+      case 'chofer':
+        return Icons.local_taxi;
+      case 'delivery':
+        return Icons.delivery_dining;
+      case 'seguridad':
+        return Icons.security;
+      case 'belleza':
+        return Icons.face;
+      case 'mascotas':
+        return Icons.pets;
+      case 'eventos':
+        return Icons.celebration;
+      case 'fotografía':
+        return Icons.camera_alt;
+      case 'diseño':
+        return Icons.design_services;
+      case 'marketing':
+        return Icons.campaign;
+      case 'contabilidad':
+        return Icons.calculate;
+      case 'legal':
+        return Icons.gavel;
+      case 'salud':
+        return Icons.medical_services;
+      case 'fitness':
+        return Icons.fitness_center;
+      case 'música':
+        return Icons.music_note;
+      case 'traducción':
+        return Icons.translate;
+      case 'escritura':
+        return Icons.edit;
+      default:
+        return Icons.work;
+    }
   }
 
   @override
@@ -163,7 +256,8 @@ class _MapScreenState extends State<MapScreen> {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+                subdomains: const ['a', 'b', 'c', 'd'],
                 userAgentPackageName: 'com.example.laboraya_app',
               ),
               MarkerLayer(

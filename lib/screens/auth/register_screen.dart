@@ -85,9 +85,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         id: credential.user!.uid,
         name: _nameController.text.trim(),
         email: email,
-        phone: _phoneController.text.trim().isEmpty 
-            ? '999999999' 
-            : _phoneController.text.trim(),
+        phone: _phoneController.text.trim(),
         district: 'Lima',
         rating: 0.0,
         completedJobs: 0,
@@ -419,7 +417,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 fontSize: 16,
                               ),
                               decoration: InputDecoration(
-                                labelText: 'Teléfono (opcional)',
+                                labelText: 'Teléfono',
                                 labelStyle: TextStyle(
                                   color: Theme.of(context).brightness == Brightness.dark
                                       ? Colors.grey[400]
@@ -459,7 +457,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               keyboardType: TextInputType.phone,
                               validator: (value) {
-                                // Campo opcional - sin validación
+                                if (value?.isEmpty ?? true) {
+                                  return 'Ingresa tu teléfono';
+                                }
+                                if (value!.length < 9) {
+                                  return 'Teléfono inválido';
+                                }
                                 return null;
                               },
                             ),

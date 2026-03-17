@@ -20,8 +20,29 @@ import 'work_history_screen.dart';
 import 'edit_profile_screen.dart';
 import 'reviews_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Refrescar datos del usuario al entrar al perfil
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<UserService>().refreshCurrentUser();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refrescar cada vez que se vuelve a esta pantalla
+    context.read<UserService>().refreshCurrentUser();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +58,19 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Mi Perfil'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              context.read<UserService>().refreshCurrentUser();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Perfil actualizado'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+            tooltip: 'Actualizar',
+          ),
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
@@ -298,59 +332,6 @@ class ProfileScreen extends StatelessWidget {
                         ],
                       ),
                     ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Botones de contacto
-            Container(
-              padding: const EdgeInsets.all(AppSizes.paddingLarge),
-              color: Theme.of(context).cardColor,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        // Abrir WhatsApp
-                        final phone = user.phone.replaceAll(RegExp(r'[^\d]'), '');
-                        final url = 'https://wa.me/51$phone';
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Abrir WhatsApp: $url')),
-                        );
-                      },
-                      icon: const WhatsAppIcon(size: 24),
-                      label: const Text('WhatsApp'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF25D366),
-                        foregroundColor: AppColors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Llamar a ${user.phone}')),
-                        );
-                      },
-                      icon: const Icon(Icons.phone, size: 24),
-                      label: const Text('Llamar'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: AppColors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
                   ),
                 ],
               ),

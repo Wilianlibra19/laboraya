@@ -21,8 +21,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _phoneController;
   late TextEditingController _districtController;
   late TextEditingController _descriptionController;
-  late TextEditingController _availabilityController;
   
+  String _selectedAvailability = 'Disponible';
   List<String> _skills = [];
   String? _photoPath;
   bool _isLoading = false;
@@ -35,7 +35,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _phoneController = TextEditingController(text: user.phone);
     _districtController = TextEditingController(text: user.district);
     _descriptionController = TextEditingController(text: user.description);
-    _availabilityController = TextEditingController(text: user.availability);
+    _selectedAvailability = user.availability;
     _skills = List.from(user.skills);
     _photoPath = user.photo;
   }
@@ -46,7 +46,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _phoneController.dispose();
     _districtController.dispose();
     _descriptionController.dispose();
-    _availabilityController.dispose();
     super.dispose();
   }
 
@@ -180,7 +179,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         rating: user.rating,
         completedJobs: user.completedJobs,
         skills: _skills,
-        availability: _availabilityController.text,
+        availability: _selectedAvailability,
         description: _descriptionController.text,
         documents: user.documents,
         createdAt: user.createdAt,
@@ -581,12 +580,66 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     color: Colors.purple,
                   ),
                   const SizedBox(height: 20),
-                  _buildTextField(
-                    controller: _availabilityController,
-                    label: 'Horario disponible',
-                    hint: 'Ej: Lunes a Sábado, 8am - 6pm',
-                    icon: Icons.access_time,
-                    isDark: isDark,
+                  Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey[800] : Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                      ),
+                    ),
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedAvailability,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.access_time),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Disponible',
+                          child: Text(
+                            'Disponible',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'No disponible',
+                          child: Text(
+                            'No disponible',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Disponible fines de semana',
+                          child: Text(
+                            'Disponible fines de semana',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Disponible entre semana',
+                          child: Text(
+                            'Disponible entre semana',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _selectedAvailability = value);
+                        }
+                      },
+                    ),
                   ),
                 ],
               ),

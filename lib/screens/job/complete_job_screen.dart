@@ -74,6 +74,13 @@ class _CompleteJobScreenState extends State<CompleteJobScreen> {
       // 4. Actualizar calificación del trabajador
       await userRepo.updateRating(widget.worker.id, _rating);
 
+      // 5. Recargar datos del usuario si es el trabajador
+      if (currentUser.id == widget.worker.id) {
+        print('🔄 Recargando datos del trabajador...');
+        await context.read<UserService>().refreshCurrentUser();
+        print('✅ Datos del trabajador recargados');
+      }
+
       if (mounted) {
         Navigator.pop(context); // Cerrar pantalla de completar
         Navigator.pop(context); // Cerrar detalle del trabajo

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/services/user_service.dart';
 import '../../utils/constants.dart';
 import 'change_password_screen.dart';
 import 'notification_settings_screen.dart';
 import 'privacy_screen.dart';
 import 'blocked_users_screen.dart';
+import '../auth/welcome_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -338,6 +340,8 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
+    final passwordController = TextEditingController();
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -369,68 +373,298 @@ class SettingsScreen extends StatelessWidget {
             const Text('• Perderás acceso a tus trabajos'),
             const Text('• No podrás recuperar tu cuenta'),
             const Text('• Se eliminarán tus calificaciones'),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             const Text(
-              '¿Estás completamente seguro?',
+              'Confirma tu contraseña:',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Colors.red,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: InputDecoration(
+                hintText: 'Contraseña',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                prefixIcon: const Icon(Icons.lock),
               ),
             ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              passwordController.dispose();
+              Navigator.pop(context);
+            },
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
-              // Mostrar segundo diálogo de confirmación
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Confirmación final'),
-                  content: const Text(
-                    'Escribe "ELIMINAR" para confirmar',
+              final password = passwordController.text.trim();
+              
+              if (password.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Ingresa tu contraseña'),
+                    backgroundColor: Colors.orange,
                   ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancelar'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.red,
-                      ),
-                      child: const Text('ELIMINAR'),
-                    ),
-                  ],
+                );
+                return;
+              }
+              
+              Navigator.pop(context);
+              
+              // Mostrar loading
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const AlertDialog(
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Eliminando cuenta...'),
+                    ],
+                  ),
                 ),
               );
-
-              if (confirmed == true && context.mounted) {
-                try {
-                  // Aquí se eliminaría la cuenta
-                  // await FirebaseAuth.instance.currentUser?.delete();
+              
+              try {
+                final user = FirebaseAuth.instance.currentUser;
+                if (user == null || user.email == null) {
+                  throw Exception('Usuario no encontrado');
+                }
+                
+                final userId = user.uid; // Guardar el ID antes de cualquier operación
+                print('🔴 Iniciando eliminación de cuenta para usuario: $userId');
+                
+                // Re-autenticar usuario
+                final credential = EmailAuthProvider.credential(
+                  email: user.email!,
+                  password: password,
+                );
+                
+                print('🔐 Re-autenticando usuario...');
+                await user.reauthenticateWithCredential(credential);
+                print('✅ Usuario re-autenticado');
+                
+                final firestore = FirebaseFirestore.instance;
+                
+                // Eliminar todos los datos relacionados con el usuario
+                print('🗑️ Eliminando todos los datos del usuario...');
+                
+                // 1. Eliminar trabajos creados por el usuario
+                print('  - Eliminando trabajos...');
+                final jobs = await firestore
+                    .collection('jobs')
+                    .where('createdBy', isEqualTo: userId)
+                    .get();
+                for (var doc in jobs.docs) {
+                  await doc.reference.delete();
+                }
+                print('  ✅ ${jobs.docs.length} trabajos eliminados');
+                
+                // 2. Eliminar mensajes enviados o recibidos
+                print('  - Eliminando mensajes enviados...');
+                final sentMessages = await firestore
+                    .collection('messages')
+                    .where('senderId', isEqualTo: userId)
+                    .get();
+                for (var doc in sentMessages.docs) {
+                  await doc.reference.delete();
+                }
+                print('  ✅ ${sentMessages.docs.length} mensajes enviados eliminados');
+                
+                print('  - Eliminando mensajes recibidos...');
+                final receivedMessages = await firestore
+                    .collection('messages')
+                    .where('receiverId', isEqualTo: userId)
+                    .get();
+                for (var doc in receivedMessages.docs) {
+                  await doc.reference.delete();
+                }
+                print('  ✅ ${receivedMessages.docs.length} mensajes recibidos eliminados');
+                
+                // 3. Eliminar notificaciones
+                print('  - Eliminando notificaciones...');
+                final notifications = await firestore
+                    .collection('notifications')
+                    .where('userId', isEqualTo: userId)
+                    .get();
+                for (var doc in notifications.docs) {
+                  await doc.reference.delete();
+                }
+                print('  ✅ ${notifications.docs.length} notificaciones eliminadas');
+                
+                // 4. Eliminar solicitudes de trabajo
+                print('  - Eliminando solicitudes de trabajo...');
+                final applications = await firestore
+                    .collection('job_applications')
+                    .where('applicantId', isEqualTo: userId)
+                    .get();
+                for (var doc in applications.docs) {
+                  await doc.reference.delete();
+                }
+                print('  ✅ ${applications.docs.length} solicitudes eliminadas');
+                
+                // 5. Eliminar favoritos
+                print('  - Eliminando favoritos...');
+                final favorites = await firestore
+                    .collection('favorites')
+                    .where('userId', isEqualTo: userId)
+                    .get();
+                for (var doc in favorites.docs) {
+                  await doc.reference.delete();
+                }
+                print('  ✅ ${favorites.docs.length} favoritos eliminados');
+                
+                // 6. Eliminar reportes
+                print('  - Eliminando reportes...');
+                final reports = await firestore
+                    .collection('reports')
+                    .where('reporterId', isEqualTo: userId)
+                    .get();
+                for (var doc in reports.docs) {
+                  await doc.reference.delete();
+                }
+                print('  ✅ ${reports.docs.length} reportes eliminados');
+                
+                // 7. Eliminar calificaciones
+                print('  - Eliminando calificaciones...');
+                final reviews = await firestore
+                    .collection('reviews')
+                    .where('reviewerId', isEqualTo: userId)
+                    .get();
+                for (var doc in reviews.docs) {
+                  await doc.reference.delete();
+                }
+                print('  ✅ ${reviews.docs.length} calificaciones eliminadas');
+                
+                // 8. Eliminar usuarios bloqueados
+                print('  - Eliminando bloqueos...');
+                final blocks = await firestore
+                    .collection('blocked_users')
+                    .where('blockerId', isEqualTo: userId)
+                    .get();
+                for (var doc in blocks.docs) {
+                  await doc.reference.delete();
+                }
+                print('  ✅ ${blocks.docs.length} bloqueos eliminados');
+                
+                // 9. Eliminar portafolio
+                print('  - Eliminando portafolio...');
+                final portfolio = await firestore
+                    .collection('portfolio')
+                    .where('userId', isEqualTo: userId)
+                    .get();
+                for (var doc in portfolio.docs) {
+                  await doc.reference.delete();
+                }
+                print('  ✅ ${portfolio.docs.length} items de portafolio eliminados');
+                
+                // 10. Eliminar verificaciones
+                print('  - Eliminando verificaciones...');
+                final verifications = await firestore
+                    .collection('verifications')
+                    .where('userId', isEqualTo: userId)
+                    .get();
+                for (var doc in verifications.docs) {
+                  await doc.reference.delete();
+                }
+                print('  ✅ ${verifications.docs.length} verificaciones eliminadas');
+                
+                // 11. Eliminar referidos
+                print('  - Eliminando referidos...');
+                final referrals = await firestore
+                    .collection('referrals')
+                    .where('referrerId', isEqualTo: userId)
+                    .get();
+                for (var doc in referrals.docs) {
+                  await doc.reference.delete();
+                }
+                print('  ✅ ${referrals.docs.length} referidos eliminados');
+                
+                // 12. Finalmente, eliminar el documento del usuario
+                print('  - Eliminando documento de usuario...');
+                await firestore.collection('users').doc(userId).delete();
+                print('  ✅ Documento de usuario eliminado');
+                
+                // Eliminar cuenta de Authentication
+                print('🗑️ Eliminando cuenta de Authentication...');
+                await user.delete();
+                print('✅ Cuenta eliminada de Authentication');
+                
+                // Cerrar sesión DESPUÉS de eliminar todo
+                print('🚪 Cerrando sesión...');
+                await context.read<UserService>().logout();
+                
+                if (context.mounted) {
+                  // Cerrar loading
+                  Navigator.pop(context);
+                  
+                  // Ir a pantalla de bienvenida
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                    (route) => false,
+                  );
+                  
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Función deshabilitada en versión de prueba'),
-                      backgroundColor: Colors.orange,
+                      content: Text('Cuenta y todos los datos eliminados exitosamente'),
+                      backgroundColor: Colors.green,
+                      duration: Duration(seconds: 3),
                     ),
                   );
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
                 }
+              } on FirebaseAuthException catch (e) {
+                print('❌ Error de autenticación: ${e.code} - ${e.message}');
+                
+                if (context.mounted) {
+                  Navigator.pop(context); // Cerrar loading
+                  
+                  String message = 'Error al eliminar cuenta';
+                  if (e.code == 'wrong-password') {
+                    message = 'Contraseña incorrecta';
+                  } else if (e.code == 'too-many-requests') {
+                    message = 'Demasiados intentos. Intenta más tarde';
+                  } else if (e.code == 'requires-recent-login') {
+                    message = 'Por seguridad, cierra sesión y vuelve a iniciar';
+                  } else if (e.code == 'user-not-found') {
+                    message = 'Usuario no encontrado';
+                  } else {
+                    message = 'Error: ${e.message}';
+                  }
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(message),
+                      backgroundColor: Colors.red,
+                      duration: const Duration(seconds: 4),
+                    ),
+                  );
+                }
+              } catch (e) {
+                print('❌ Error general: $e');
+                
+                if (context.mounted) {
+                  Navigator.pop(context); // Cerrar loading
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: Colors.red,
+                      duration: const Duration(seconds: 4),
+                    ),
+                  );
+                }
+              } finally {
+                passwordController.dispose();
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),

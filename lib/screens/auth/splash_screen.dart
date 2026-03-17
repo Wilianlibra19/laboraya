@@ -23,20 +23,12 @@ class _SplashScreenState extends State<SplashScreen> {
       // Esperar 2 segundos para mostrar el splash
       await Future.delayed(const Duration(seconds: 2));
       
-      // Verificar si es la primera vez
-      final prefs = await SharedPreferences.getInstance();
-      final onboardingCompleted = prefs.getBool('onboarding_completed') ?? false;
-      
+      // Siempre ir a WelcomeScreen (login/registro)
+      // El onboarding solo se muestra después de crear cuenta
       if (mounted) {
-        if (onboardingCompleted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-          );
-        } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-          );
-        }
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+        );
       }
     } catch (e) {
       debugPrint('Error initializing: $e');

@@ -81,7 +81,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       print('📊 jobStatus: ${job!.jobStatus}');
       print('👤 acceptedBy: ${job!.acceptedBy}');
       
-      creator = await userService.getUserById(job!.createdBy);
+      // Si el trabajo está completado o en progreso, mostrar el trabajador
+      // Si está disponible, mostrar quien lo publicó
+      if (job!.acceptedBy != null && job!.acceptedBy!.isNotEmpty) {
+        creator = await userService.getUserById(job!.acceptedBy!);
+        print('👷 Mostrando perfil del trabajador: ${creator?.name}');
+      } else {
+        creator = await userService.getUserById(job!.createdBy);
+        print('👤 Mostrando perfil del publicador: ${creator?.name}');
+      }
     } else {
       print('❌ Trabajo no encontrado');
     }
@@ -614,63 +622,143 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
             if (creator != null)
               Container(
-                padding: const EdgeInsets.all(AppSizes.paddingLarge),
-                color: Theme.of(context).cardColor,
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary,
+                      AppColors.primary.withOpacity(0.8),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Publicado por',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    Text(
+                      job!.jobStatus == 'completed' || job!.jobStatus == 'in_progress'
+                          ? 'Trabajador'
+                          : 'Publicado por',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white70,
                       ),
                     ),
+                    const SizedBox(height: 20),
+                    CircleAvatar(
+                      radius: 60,
+                      backgroundColor: Colors.white,
+                      backgroundImage: creator!.photo != null && creator!.photo!.isNotEmpty
+                          ? NetworkImage(creator!.photo!)
+                          : null,
+                      child: creator!.photo == null || creator!.photo!.isEmpty
+                          ? Text(
+                              Helpers.getInitials(creator!.name),
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 32,
+                              ),
+                            )
+                          : null,
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      creator!.name,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    if (creator!.isVerified)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.success,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.verified,
+                              size: 18,
+                              color: Colors.white,
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              'Verificado',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     const SizedBox(height: 16),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        CircleAvatar(
-                          radius: 30,
-                          backgroundColor: AppColors.primary,
-                          child: Text(
-                            Helpers.getInitials(creator!.name),
-                            style: const TextStyle(
-                              color: AppColors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        const Icon(
+                          Icons.star,
+                          size: 24,
+                          color: Colors.amber,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          creator!.rating.toStringAsFixed(1),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
                         const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                creator!.name,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.star,
-                                    size: 16,
-                                    color: AppColors.urgent,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${creator!.rating.toStringAsFixed(1)} (${creator!.completedJobs} trabajos)',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: AppColors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${creator!.completedJobs} trabajos',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.location_on,
+                          size: 18,
+                          color: Colors.white70,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          creator!.district,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.white70,
                           ),
                         ),
                       ],
