@@ -13,10 +13,7 @@ class JobProgressBar extends StatelessWidget {
     final currentStepIndex = _getCurrentStepIndex();
 
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: AppSizes.paddingMedium,
-        vertical: AppSizes.paddingSmall,
-      ),
+      // Sin margin horizontal para evitar overflow
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -33,7 +30,7 @@ class JobProgressBar extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(AppSizes.paddingLarge),
+        padding: const EdgeInsets.all(16), // Reducido de paddingLarge
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -52,11 +49,13 @@ class JobProgressBar extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Text(
-                  'Progreso del Trabajo',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                const Expanded(
+                  child: Text(
+                    'Progreso del Trabajo',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -294,12 +293,14 @@ class JobProgressBar extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
-                'Progreso del Contrato',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange,
+              const Expanded(
+                child: Text(
+                  'Progreso del Contrato',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
                 ),
               ),
             ],
@@ -325,27 +326,30 @@ class JobProgressBar extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Día $daysPassed de $estimatedDays',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Día $daysPassed de $estimatedDays',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${(progress * 100).toStringAsFixed(0)}% completado',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade700,
+                    const SizedBox(height: 4),
+                    Text(
+                      '${(progress * 100).toStringAsFixed(0)}% completado',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade700,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -393,11 +397,13 @@ class JobProgressBar extends StatelessWidget {
                       color: Colors.green,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      'Inicio: ${_formatDate(startDate)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade700,
+                    Expanded(
+                      child: Text(
+                        'Inicio: ${_formatDate(startDate)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade700,
+                        ),
                       ),
                     ),
                   ],
@@ -411,11 +417,13 @@ class JobProgressBar extends StatelessWidget {
                       color: progress >= 1.0 ? Colors.red : Colors.orange,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      'Fin estimado: ${_formatDate(estimatedEndDate)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade700,
+                    Expanded(
+                      child: Text(
+                        'Fin estimado: ${_formatDate(estimatedEndDate)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade700,
+                        ),
                       ),
                     ),
                   ],

@@ -16,35 +16,43 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<OnboardingPage> _pages = [
     OnboardingPage(
-      title: 'Encuentra Trabajo',
-      description: 'Busca trabajos cerca de ti y aplica con un mensaje personalizado',
-      image: Icons.work_outline,
+      title: 'Encuentra trabajo cerca de ti',
+      description:
+          'Explora oportunidades reales en tu zona y postúlate rápido con un mensaje personalizado.',
+      icon: Icons.work_outline_rounded,
       color: Colors.blue,
+      accent: const Color(0xFF64B5F6),
     ),
     OnboardingPage(
-      title: 'Publica Trabajos',
-      description: 'Necesitas ayuda? Publica un trabajo y recibe solicitudes de trabajadores calificados',
-      image: Icons.add_business,
+      title: 'Publica trabajos en minutos',
+      description:
+          'Necesitas ayuda con una tarea o proyecto. Publica tu solicitud y recibe respuestas fácilmente.',
+      icon: Icons.add_business_rounded,
       color: Colors.green,
+      accent: const Color(0xFF81C784),
     ),
     OnboardingPage(
-      title: 'Chat en Tiempo Real',
-      description: 'Comunícate directamente con empleadores y trabajadores',
-      image: Icons.chat_bubble_outline,
+      title: 'Chatea y coordina al instante',
+      description:
+          'Habla directo con clientes o trabajadores y organiza todo sin salir de la app.',
+      icon: Icons.chat_bubble_outline_rounded,
       color: Colors.purple,
+      accent: const Color(0xFFBA68C8),
     ),
     OnboardingPage(
-      title: 'Gana Dinero',
-      description: 'Completa trabajos, recibe calificaciones y aumenta tus ganancias',
-      image: Icons.attach_money,
+      title: 'Completa trabajos y gana más',
+      description:
+          'Mejora tu perfil con buenas calificaciones y aumenta tus oportunidades dentro de LaboraYa.',
+      icon: Icons.attach_money_rounded,
       color: Colors.orange,
+      accent: const Color(0xFFFFB74D),
     ),
   ];
 
   Future<void> _completeOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('onboarding_completed', true);
-    
+
     if (mounted) {
       Navigator.pushReplacement(
         context,
@@ -53,145 +61,335 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
+  void _goNext() {
+    if (_currentPage == _pages.length - 1) {
+      _completeOnboarding();
+      return;
+    }
+
+    _pageController.nextPage(
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeInOut,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isLast = _currentPage == _pages.length - 1;
+    final page = _pages[_currentPage];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() => _currentPage = index);
-                },
-                itemCount: _pages.length,
-                itemBuilder: (context, index) {
-                  return _buildPage(_pages[index]);
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      _pages.length,
-                      (index) => _buildDot(index),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  if (_currentPage == _pages.length - 1)
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _completeOnboarding,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+      backgroundColor: isDark ? const Color(0xFF0F1115) : const Color(0xFFF6F8FC),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              page.color.withOpacity(0.08),
+              page.accent.withOpacity(0.05),
+              isDark ? const Color(0xFF0F1115) : const Color(0xFFF6F8FC),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 44),
+                    Expanded(
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
                           ),
-                        ),
-                        child: const Text(
-                          'Comenzar',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          decoration: BoxDecoration(
+                            color: page.color.withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            'LaboraYa',
+                            style: TextStyle(
+                              color: page.color,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                         ),
                       ),
-                    )
-                  else
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        TextButton(
-                          onPressed: _completeOnboarding,
-                          child: const Text('Saltar'),
+                    ),
+                    TextButton(
+                      onPressed: _completeOnboarding,
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey[700],
+                      ),
+                      child: const Text(
+                        'Saltar',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
                         ),
-                        ElevatedButton(
-                          onPressed: () {
-                            _pageController.nextPage(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 32,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: _pages.length,
+                  onPageChanged: (index) {
+                    setState(() => _currentPage = index);
+                  },
+                  itemBuilder: (context, index) {
+                    return _buildPage(_pages[index], isDark);
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        ...List.generate(
+                          _pages.length,
+                          (index) => _buildDot(index, _pages[index]),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${_currentPage + 1}/${_pages.length}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.grey[600],
                           ),
-                          child: const Text('Siguiente'),
                         ),
                       ],
                     ),
-                ],
+                    const SizedBox(height: 20),
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
+                        ),
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.28),
+                            blurRadius: 16,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          onTap: _goNext,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 17),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  isLast
+                                      ? Icons.check_circle_outline_rounded
+                                      : Icons.arrow_forward_rounded,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  isLast ? 'Comenzar ahora' : 'Siguiente',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (!isLast) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Desliza para continuar',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildPage(OnboardingPage page) {
+  Widget _buildPage(OnboardingPage page, bool isDark) {
     return Padding(
-      padding: const EdgeInsets.all(40),
+      padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const Spacer(),
           Container(
-            width: 200,
-            height: 200,
+            width: double.infinity,
+            padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: page.color.withOpacity(0.1),
-              shape: BoxShape.circle,
+              color: isDark ? const Color(0xFF171A20) : Colors.white,
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withOpacity(0.05)
+                    : const Color(0xFFE8EEF6),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.18 : 0.05),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
-            child: Icon(
-              page.image,
-              size: 100,
-              color: page.color,
+            child: Column(
+              children: [
+                Container(
+                  width: 170,
+                  height: 170,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        page.color.withOpacity(0.18),
+                        page.accent.withOpacity(0.10),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 110,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        color: page.color,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: page.color.withOpacity(0.28),
+                            blurRadius: 18,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        page.icon,
+                        size: 52,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 34),
+                Text(
+                  page.title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 29,
+                    height: 1.2,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : const Color(0xFF162033),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  page.description,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15.5,
+                    height: 1.6,
+                    color: isDark ? Colors.white70 : const Color(0xFF5D6A79),
+                  ),
+                ),
+                const SizedBox(height: 26),
+                _buildMiniHighlights(page),
+              ],
             ),
           ),
-          const SizedBox(height: 48),
-          Text(
-            page.title,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            page.description,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
+          const Spacer(),
         ],
       ),
     );
   }
 
-  Widget _buildDot(int index) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      width: _currentPage == index ? 24 : 8,
+  Widget _buildMiniHighlights(OnboardingPage page) {
+    final List<String> items;
+    switch (page.title) {
+      case 'Encuentra trabajo cerca de ti':
+        items = ['Trabajos cercanos', 'Aplicación rápida'];
+        break;
+      case 'Publica trabajos en minutos':
+        items = ['Publicación simple', 'Respuestas rápidas'];
+        break;
+      case 'Chatea y coordina al instante':
+        items = ['Mensajes en tiempo real', 'Coordinación directa'];
+        break;
+      default:
+        items = ['Más confianza', 'Más oportunidades'];
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: items
+          .map(
+            (item) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: page.color.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                item,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: page.color,
+                ),
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Widget _buildDot(int index, OnboardingPage page) {
+    final isActive = _currentPage == index;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      margin: const EdgeInsets.only(right: 8),
+      width: isActive ? 28 : 8,
       height: 8,
       decoration: BoxDecoration(
-        color: _currentPage == index ? AppColors.primary : Colors.grey[300],
-        borderRadius: BorderRadius.circular(4),
+        color: isActive ? page.color : Colors.grey[300],
+        borderRadius: BorderRadius.circular(999),
       ),
     );
   }
@@ -200,13 +398,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 class OnboardingPage {
   final String title;
   final String description;
-  final IconData image;
+  final IconData icon;
   final Color color;
+  final Color accent;
 
   OnboardingPage({
     required this.title,
     required this.description,
-    required this.image,
+    required this.icon,
     required this.color,
+    required this.accent,
   });
 }

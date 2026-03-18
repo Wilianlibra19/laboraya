@@ -1,14 +1,15 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../core/services/user_service.dart';
 import '../../utils/constants.dart';
+import '../auth/welcome_screen.dart';
+import 'blocked_users_screen.dart';
 import 'change_password_screen.dart';
 import 'notification_settings_screen.dart';
 import 'privacy_screen.dart';
-import 'blocked_users_screen.dart';
-import '../auth/welcome_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -16,340 +17,436 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentUser = context.watch<UserService>().currentUser;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Configuración'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-      ),
-      body: ListView(
+      backgroundColor:
+          isDark ? const Color(0xFF111315) : const Color(0xFFF6F8FC),
+      body: Column(
         children: [
-          const SizedBox(height: 16),
-          _buildSection(
-            title: 'Cuenta',
-            children: [
-              _buildTile(
-                icon: Icons.lock_outline,
-                title: 'Cambiar contraseña',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
-                  );
-                },
-              ),
-              _buildTile(
-                icon: Icons.email_outlined,
-                title: 'Correo electrónico',
-                subtitle: currentUser?.email ?? '',
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Correo electrónico'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Tu correo actual es:'),
-                          const SizedBox(height: 8),
-                          Text(
-                            currentUser?.email ?? '',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
+          _buildHeader(context, currentUser?.email ?? ''),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+              children: [
+                _SettingsSectionCard(
+                  title: 'Cuenta',
+                  icon: Icons.person_outline_rounded,
+                  iconColor: AppColors.primary,
+                  children: [
+                    _SettingsTile(
+                      icon: Icons.lock_outline_rounded,
+                      title: 'Cambiar contraseña',
+                      subtitle: 'Actualiza tu clave de acceso',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ChangePasswordScreen(),
                           ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Para cambiar tu correo, contacta con soporte.',
-                            style: TextStyle(fontSize: 14, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cerrar'),
-                        ),
-                      ],
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
-            ],
-          ),
-          const Divider(height: 32),
-          _buildSection(
-            title: 'Notificaciones',
-            children: [
-              _buildTile(
-                icon: Icons.notifications_outlined,
-                title: 'Configurar notificaciones',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const NotificationSettingsScreen()),
-                  );
-                },
-              ),
-            ],
-          ),
-          const Divider(height: 32),
-          _buildSection(
-            title: 'Privacidad y Seguridad',
-            children: [
-              _buildTile(
-                icon: Icons.privacy_tip_outlined,
-                title: 'Privacidad',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const PrivacyScreen()),
-                  );
-                },
-              ),
-              _buildTile(
-                icon: Icons.block,
-                title: 'Usuarios bloqueados',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const BlockedUsersScreen()),
-                  );
-                },
-              ),
-            ],
-          ),
-          const Divider(height: 32),
-          _buildSection(
-            title: 'Soporte',
-            children: [
-              _buildTile(
-                icon: Icons.help_outline,
-                title: 'Centro de ayuda',
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Centro de ayuda'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            '¿Necesitas ayuda?',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _buildHelpItem(
-                            icon: Icons.email,
-                            title: 'Email',
-                            subtitle: 'soporte@laboraya.com',
-                          ),
-                          const SizedBox(height: 12),
-                          _buildHelpItem(
-                            icon: Icons.phone,
-                            title: 'WhatsApp',
-                            subtitle: '+51 999 999 999',
-                          ),
-                          const SizedBox(height: 12),
-                          _buildHelpItem(
-                            icon: Icons.schedule,
-                            title: 'Horario',
-                            subtitle: 'Lun - Vie: 9am - 6pm',
-                          ),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cerrar'),
-                        ),
-                      ],
+                    _SettingsTile(
+                      icon: Icons.email_outlined,
+                      title: 'Correo electrónico',
+                      subtitle: currentUser?.email ?? '',
+                      onTap: () {
+                        _showEmailDialog(context, currentUser?.email ?? '');
+                      },
                     ),
-                  );
-                },
-              ),
-              _buildTile(
-                icon: Icons.info_outline,
-                title: 'Acerca de',
-                subtitle: 'Versión 1.0.0',
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Acerca de LaboraYa'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.work,
-                              size: 48,
-                              color: AppColors.primary,
-                            ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _SettingsSectionCard(
+                  title: 'Notificaciones',
+                  icon: Icons.notifications_outlined,
+                  iconColor: Colors.orange,
+                  children: [
+                    _SettingsTile(
+                      icon: Icons.notifications_active_outlined,
+                      title: 'Configurar notificaciones',
+                      subtitle: 'Push, sonido y preferencias',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const NotificationSettingsScreen(),
                           ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'LaboraYa',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Versión 1.0.0',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Encuentra trabajo cerca de ti.\nConecta con trabajadores locales.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 14),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            '© 2026 LaboraYa. Todos los derechos reservados.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cerrar'),
-                        ),
-                      ],
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _SettingsSectionCard(
+                  title: 'Privacidad y seguridad',
+                  icon: Icons.shield_outlined,
+                  iconColor: Colors.green,
+                  children: [
+                    _SettingsTile(
+                      icon: Icons.privacy_tip_outlined,
+                      title: 'Privacidad',
+                      subtitle: 'Cómo protegemos tu información',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PrivacyScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    _SettingsTile(
+                      icon: Icons.block_rounded,
+                      title: 'Usuarios bloqueados',
+                      subtitle: 'Gestiona tu lista de bloqueos',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const BlockedUsersScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _SettingsSectionCard(
+                  title: 'Soporte',
+                  icon: Icons.support_agent_rounded,
+                  iconColor: Colors.purple,
+                  children: [
+                    _SettingsTile(
+                      icon: Icons.help_outline_rounded,
+                      title: 'Centro de ayuda',
+                      subtitle: 'Soporte y contacto',
+                      onTap: () => _showHelpDialog(context),
+                    ),
+                    _SettingsTile(
+                      icon: Icons.info_outline_rounded,
+                      title: 'Acerca de',
+                      subtitle: 'Versión 1.0.0',
+                      onTap: () => _showAboutDialog(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                _DangerZoneCard(
+                  onDeleteTap: () => _showDeleteAccountDialog(context),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
-          const Divider(height: 32),
-          _buildSection(
-            title: 'Zona de peligro',
-            children: [
-              _buildTile(
-                icon: Icons.delete_forever,
-                title: 'Eliminar cuenta',
-                titleColor: Colors.red,
-                onTap: () => _showDeleteAccountDialog(context),
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
         ],
       ),
     );
   }
 
-  Widget _buildSection({required String title, required List<Widget> children}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
+  Widget _buildHeader(BuildContext context, String email) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 54, 16, 24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary,
+            AppColors.primary.withOpacity(0.88),
+            const Color(0xFF67C4FF),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.24),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          _HeaderBackButton(
+            onTap: () => Navigator.pop(context),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Configuración',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Cuenta, privacidad, soporte y seguridad',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-        ...children,
-      ],
-    );
-  }
-
-  Widget _buildTile({
-    required IconData icon,
-    required String title,
-    String? subtitle,
-    Color? titleColor,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: titleColor ?? AppColors.primary),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: titleColor,
-          fontWeight: FontWeight.w500,
-        ),
+          if (email.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.14),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.settings_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+        ],
       ),
-      subtitle: subtitle != null ? Text(subtitle) : null,
-      trailing: const Icon(Icons.chevron_right),
-      onTap: onTap,
     );
   }
 
-  Widget _buildHelpItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: AppColors.primary),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
-              ),
-              Text(
-                subtitle,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
+  void _showEmailDialog(BuildContext context, String email) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
         ),
-      ],
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.email_outlined,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text('Correo electrónico'),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Tu correo actual es:'),
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: AppColors.primary.withOpacity(0.16),
+                ),
+              ),
+              child: Text(
+                email,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Para cambiar tu correo, contacta con soporte.',
+              style: TextStyle(
+                fontSize: 13.5,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showHelpDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.purple.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.support_agent_rounded,
+                color: Colors.purple,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text('Centro de ayuda'),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            _HelpItem(
+              icon: Icons.email_outlined,
+              title: 'Email',
+              subtitle: 'soporte@laboraya.com',
+            ),
+            SizedBox(height: 14),
+            _HelpItem(
+              icon: Icons.phone_outlined,
+              title: 'WhatsApp',
+              subtitle: '+51 999 999 999',
+            ),
+            SizedBox(height: 14),
+            _HelpItem(
+              icon: Icons.schedule_rounded,
+              title: 'Horario',
+              subtitle: 'Lun - Vie: 9am - 6pm',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+        contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 18),
+        title: const SizedBox.shrink(),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 74,
+              height: 74,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primary,
+                    AppColors.primary.withOpacity(0.75),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: const Icon(
+                Icons.work_outline_rounded,
+                size: 36,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'LaboraYa',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Versión 1.0.0',
+              style: TextStyle(
+                fontSize: 13.5,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Encuentra trabajo cerca de ti.\nConecta con trabajadores locales.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14.2,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '© 2026 LaboraYa. Todos los derechos reservados.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12.5,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
     );
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
     final passwordController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
         title: Row(
           children: [
-            const Icon(Icons.warning, color: Colors.red),
-            const SizedBox(width: 8),
-            const Text('Eliminar cuenta'),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.warning_amber_rounded, color: Colors.red),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text('Eliminar cuenta'),
+            ),
           ],
         ),
         content: Column(
@@ -361,24 +458,38 @@ class SettingsScreen extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
+                color: Colors.red,
               ),
             ),
-            const SizedBox(height: 12),
-            const Text(
-              'Al eliminar tu cuenta:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: Colors.red.withOpacity(0.18),
+                ),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('• Se eliminarán todos tus datos'),
+                  SizedBox(height: 6),
+                  Text('• Perderás acceso a tus trabajos'),
+                  SizedBox(height: 6),
+                  Text('• No podrás recuperar tu cuenta'),
+                  SizedBox(height: 6),
+                  Text('• Se eliminarán tus calificaciones'),
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
-            const Text('• Se eliminarán todos tus datos'),
-            const Text('• Perderás acceso a tus trabajos'),
-            const Text('• No podrás recuperar tu cuenta'),
-            const Text('• Se eliminarán tus calificaciones'),
             const SizedBox(height: 16),
             const Text(
               'Confirma tu contraseña:',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 14,
+                fontSize: 14.5,
               ),
             ),
             const SizedBox(height: 8),
@@ -387,10 +498,13 @@ class SettingsScreen extends StatelessWidget {
               obscureText: true,
               decoration: InputDecoration(
                 hintText: 'Contraseña',
+                prefixIcon: const Icon(Icons.lock_outline_rounded),
+                filled: true,
+                fillColor: Colors.grey.withOpacity(0.08),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
                 ),
-                prefixIcon: const Icon(Icons.lock),
               ),
             ),
           ],
@@ -406,7 +520,7 @@ class SettingsScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               final password = passwordController.text.trim();
-              
+
               if (password.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -416,15 +530,17 @@ class SettingsScreen extends StatelessWidget {
                 );
                 return;
               }
-              
+
               Navigator.pop(context);
-              
-              // Mostrar loading
+
               showDialog(
                 context: context,
                 barrierDismissible: false,
-                builder: (context) => const AlertDialog(
-                  content: Column(
+                builder: (context) => AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  content: const Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       CircularProgressIndicator(),
@@ -434,213 +550,163 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 ),
               );
-              
+
               try {
                 final user = FirebaseAuth.instance.currentUser;
                 if (user == null || user.email == null) {
                   throw Exception('Usuario no encontrado');
                 }
-                
-                final userId = user.uid; // Guardar el ID antes de cualquier operación
-                print('🔴 Iniciando eliminación de cuenta para usuario: $userId');
-                
-                // Re-autenticar usuario
+
+                final userId = user.uid;
+
                 final credential = EmailAuthProvider.credential(
                   email: user.email!,
                   password: password,
                 );
-                
-                print('🔐 Re-autenticando usuario...');
+
                 await user.reauthenticateWithCredential(credential);
-                print('✅ Usuario re-autenticado');
-                
+
                 final firestore = FirebaseFirestore.instance;
-                
-                // Eliminar todos los datos relacionados con el usuario
-                print('🗑️ Eliminando todos los datos del usuario...');
-                
-                // 1. Eliminar trabajos creados por el usuario
-                print('  - Eliminando trabajos...');
+
                 final jobs = await firestore
                     .collection('jobs')
                     .where('createdBy', isEqualTo: userId)
                     .get();
-                for (var doc in jobs.docs) {
+                for (final doc in jobs.docs) {
                   await doc.reference.delete();
                 }
-                print('  ✅ ${jobs.docs.length} trabajos eliminados');
-                
-                // 2. Eliminar mensajes enviados o recibidos
-                print('  - Eliminando mensajes enviados...');
+
                 final sentMessages = await firestore
                     .collection('messages')
                     .where('senderId', isEqualTo: userId)
                     .get();
-                for (var doc in sentMessages.docs) {
+                for (final doc in sentMessages.docs) {
                   await doc.reference.delete();
                 }
-                print('  ✅ ${sentMessages.docs.length} mensajes enviados eliminados');
-                
-                print('  - Eliminando mensajes recibidos...');
+
                 final receivedMessages = await firestore
                     .collection('messages')
                     .where('receiverId', isEqualTo: userId)
                     .get();
-                for (var doc in receivedMessages.docs) {
+                for (final doc in receivedMessages.docs) {
                   await doc.reference.delete();
                 }
-                print('  ✅ ${receivedMessages.docs.length} mensajes recibidos eliminados');
-                
-                // 3. Eliminar notificaciones
-                print('  - Eliminando notificaciones...');
+
                 final notifications = await firestore
                     .collection('notifications')
                     .where('userId', isEqualTo: userId)
                     .get();
-                for (var doc in notifications.docs) {
+                for (final doc in notifications.docs) {
                   await doc.reference.delete();
                 }
-                print('  ✅ ${notifications.docs.length} notificaciones eliminadas');
-                
-                // 4. Eliminar solicitudes de trabajo
-                print('  - Eliminando solicitudes de trabajo...');
+
                 final applications = await firestore
                     .collection('job_applications')
                     .where('applicantId', isEqualTo: userId)
                     .get();
-                for (var doc in applications.docs) {
+                for (final doc in applications.docs) {
                   await doc.reference.delete();
                 }
-                print('  ✅ ${applications.docs.length} solicitudes eliminadas');
-                
-                // 5. Eliminar favoritos
-                print('  - Eliminando favoritos...');
+
                 final favorites = await firestore
                     .collection('favorites')
                     .where('userId', isEqualTo: userId)
                     .get();
-                for (var doc in favorites.docs) {
+                for (final doc in favorites.docs) {
                   await doc.reference.delete();
                 }
-                print('  ✅ ${favorites.docs.length} favoritos eliminados');
-                
-                // 6. Eliminar reportes
-                print('  - Eliminando reportes...');
+
                 final reports = await firestore
                     .collection('reports')
                     .where('reporterId', isEqualTo: userId)
                     .get();
-                for (var doc in reports.docs) {
+                for (final doc in reports.docs) {
                   await doc.reference.delete();
                 }
-                print('  ✅ ${reports.docs.length} reportes eliminados');
-                
-                // 7. Eliminar calificaciones
-                print('  - Eliminando calificaciones...');
+
                 final reviews = await firestore
                     .collection('reviews')
                     .where('reviewerId', isEqualTo: userId)
                     .get();
-                for (var doc in reviews.docs) {
+                for (final doc in reviews.docs) {
                   await doc.reference.delete();
                 }
-                print('  ✅ ${reviews.docs.length} calificaciones eliminadas');
-                
-                // 8. Eliminar usuarios bloqueados
-                print('  - Eliminando bloqueos...');
+
                 final blocks = await firestore
                     .collection('blocked_users')
                     .where('blockerId', isEqualTo: userId)
                     .get();
-                for (var doc in blocks.docs) {
+                for (final doc in blocks.docs) {
                   await doc.reference.delete();
                 }
-                print('  ✅ ${blocks.docs.length} bloqueos eliminados');
-                
-                // 9. Eliminar portafolio
-                print('  - Eliminando portafolio...');
+
                 final portfolio = await firestore
                     .collection('portfolio')
                     .where('userId', isEqualTo: userId)
                     .get();
-                for (var doc in portfolio.docs) {
+                for (final doc in portfolio.docs) {
                   await doc.reference.delete();
                 }
-                print('  ✅ ${portfolio.docs.length} items de portafolio eliminados');
-                
-                // 10. Eliminar verificaciones
-                print('  - Eliminando verificaciones...');
+
                 final verifications = await firestore
                     .collection('verifications')
                     .where('userId', isEqualTo: userId)
                     .get();
-                for (var doc in verifications.docs) {
+                for (final doc in verifications.docs) {
                   await doc.reference.delete();
                 }
-                print('  ✅ ${verifications.docs.length} verificaciones eliminadas');
-                
-                // 11. Eliminar referidos
-                print('  - Eliminando referidos...');
+
                 final referrals = await firestore
                     .collection('referrals')
                     .where('referrerId', isEqualTo: userId)
                     .get();
-                for (var doc in referrals.docs) {
+                for (final doc in referrals.docs) {
                   await doc.reference.delete();
                 }
-                print('  ✅ ${referrals.docs.length} referidos eliminados');
-                
-                // 12. Finalmente, eliminar el documento del usuario
-                print('  - Eliminando documento de usuario...');
+
                 await firestore.collection('users').doc(userId).delete();
-                print('  ✅ Documento de usuario eliminado');
-                
-                // Eliminar cuenta de Authentication
-                print('🗑️ Eliminando cuenta de Authentication...');
                 await user.delete();
-                print('✅ Cuenta eliminada de Authentication');
-                
-                // Cerrar sesión DESPUÉS de eliminar todo
-                print('🚪 Cerrando sesión...');
+
                 await context.read<UserService>().logout();
-                
+
                 if (context.mounted) {
-                  // Cerrar loading
                   Navigator.pop(context);
-                  
-                  // Ir a pantalla de bienvenida
+
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const WelcomeScreen(),
+                    ),
                     (route) => false,
                   );
-                  
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Cuenta y todos los datos eliminados exitosamente'),
+                      content: Text(
+                        'Cuenta y todos los datos eliminados exitosamente',
+                      ),
                       backgroundColor: Colors.green,
                       duration: Duration(seconds: 3),
                     ),
                   );
                 }
               } on FirebaseAuthException catch (e) {
-                print('❌ Error de autenticación: ${e.code} - ${e.message}');
-                
                 if (context.mounted) {
-                  Navigator.pop(context); // Cerrar loading
-                  
+                  Navigator.pop(context);
+
                   String message = 'Error al eliminar cuenta';
                   if (e.code == 'wrong-password') {
                     message = 'Contraseña incorrecta';
                   } else if (e.code == 'too-many-requests') {
                     message = 'Demasiados intentos. Intenta más tarde';
                   } else if (e.code == 'requires-recent-login') {
-                    message = 'Por seguridad, cierra sesión y vuelve a iniciar';
+                    message =
+                        'Por seguridad, cierra sesión y vuelve a iniciar';
                   } else if (e.code == 'user-not-found') {
                     message = 'Usuario no encontrado';
                   } else {
                     message = 'Error: ${e.message}';
                   }
-                  
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(message),
@@ -650,11 +716,9 @@ class SettingsScreen extends StatelessWidget {
                   );
                 }
               } catch (e) {
-                print('❌ Error general: $e');
-                
                 if (context.mounted) {
-                  Navigator.pop(context); // Cerrar loading
-                  
+                  Navigator.pop(context);
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Error: $e'),
@@ -667,11 +731,325 @@ class SettingsScreen extends StatelessWidget {
                 passwordController.dispose();
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Eliminar cuenta'),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SettingsSectionCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color iconColor;
+  final List<Widget> children;
+
+  const _SettingsSectionCard({
+    required this.title,
+    required this.icon,
+    required this.iconColor,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1B1E22) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.05)
+              : const Color(0xFFE8EEF6),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.16 : 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  height: 42,
+                  width: 42,
+                  decoration: BoxDecoration(
+                    color: iconColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : const Color(0xFF162033),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final VoidCallback onTap;
+  final Color? color;
+
+  const _SettingsTile({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    required this.onTap,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tileColor = color ?? AppColors.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                height: 42,
+                width: 42,
+                decoration: BoxDecoration(
+                  color: tileColor.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: tileColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15.2,
+                        fontWeight: FontWeight.w700,
+                        color: color ??
+                            (isDark ? Colors.white : const Color(0xFF162033)),
+                      ),
+                    ),
+                    if (subtitle != null && subtitle!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle!,
+                        style: TextStyle(
+                          fontSize: 13.2,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.grey[500],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DangerZoneCard extends StatelessWidget {
+  final VoidCallback onDeleteTap;
+
+  const _DangerZoneCard({
+    required this.onDeleteTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.red.withOpacity(0.18),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                height: 42,
+                width: 42,
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.red,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Zona de peligro',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.red,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Esta acción eliminará permanentemente tu cuenta y toda tu información.',
+            style: TextStyle(
+              fontSize: 13.8,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onDeleteTap,
+              icon: const Icon(Icons.delete_forever_rounded),
+              label: const Text('Eliminar cuenta'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: BorderSide(color: Colors.red.withOpacity(0.35)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderBackButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _HeaderBackButton({
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withOpacity(0.16),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: const SizedBox(
+          height: 42,
+          width: 42,
+          child: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+            size: 18,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HelpItem extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _HelpItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          height: 42,
+          width: 42,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(icon, color: AppColors.primary, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 14.2,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

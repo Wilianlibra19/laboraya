@@ -1,15 +1,17 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:io';
+import 'package:uuid/uuid.dart';
+
 import '../../core/models/message_model.dart';
 import '../../core/models/user_model.dart';
+import '../../core/services/cloudinary_service.dart';
 import '../../core/services/message_service.dart';
 import '../../core/services/user_service.dart';
-import '../../core/services/cloudinary_service.dart';
 import '../../data/firebase/firebase_message_repository.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
@@ -30,8 +32,9 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final _messageController = TextEditingController();
-  final _scrollController = ScrollController();
+  final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
   String? _selectedImagePath;
   bool _isTyping = false;
   bool _isSending = false;
@@ -42,18 +45,16 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     _initialize();
-    
-    // Detectar cuando el usuario está escribiendo
+
     _messageController.addListener(() {
-      final isTyping = _messageController.text.isNotEmpty;
-      if (isTyping != _isTyping) {
-        setState(() => _isTyping = isTyping);
+      final isTypingNow = _messageController.text.trim().isNotEmpty;
+      if (isTypingNow != _isTyping) {
+        setState(() => _isTyping = isTypingNow);
       }
     });
   }
 
   Future<void> _initialize() async {
-    // Cargar todo en paralelo sin bloquear la UI
     _loadOtherUser();
     _loadInitialMessages();
     _markAsReadDelayed();
@@ -61,26 +62,15 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _loadInitialMessages() async {
     final messageRepo = FirebaseMessageRepository();
+
     try {
-      print('⏳ Cargando mensajes iniciales...');
-      final startTime = DateTime.now();
-      
       final messages = await messageRepo.getMessages(widget.jobId);
-      
-      final loadTime = DateTime.now().difference(startTime).inMilliseconds;
-      print('✅ Mensajes cargados en ${loadTime}ms: ${messages.length} mensajes');
-      
       if (mounted) {
-        setState(() {
-          _cachedMessages = messages;
-        });
+        setState(() => _cachedMessages = messages);
       }
-    } catch (e) {
-      print('❌ Error cargando mensajes iniciales: $e');
+    } catch (_) {
       if (mounted) {
-        setState(() {
-          _cachedMessages = [];
-        });
+        setState(() => _cachedMessages = []);
       }
     }
   }
@@ -90,23 +80,18 @@ class _ChatScreenState extends State<ChatScreen> {
       final userService = context.read<UserService>();
       final user = await userService.getUserById(widget.otherUserId);
       if (mounted) {
-        setState(() {
-          _otherUser = user;
-        });
+        setState(() => _otherUser = user);
       }
-    } catch (e) {
-      print('❌ Error cargando usuario: $e');
-    }
+    } catch (_) {}
   }
 
   void _markAsReadDelayed() {
-    // Marcar como leídos después de un pequeño delay para asegurar que los mensajes se cargaron
     Future.delayed(const Duration(milliseconds: 500), () {
       final currentUser = context.read<UserService>().currentUser;
       if (currentUser != null && mounted) {
-        final messageRepo = context.read<MessageService>().repository;
-        if (messageRepo is FirebaseMessageRepository) {
-          messageRepo.markMessagesAsRead(widget.jobId, currentUser.id);
+        final repo = context.read<MessageService>().repository;
+        if (repo is FirebaseMessageRepository) {
+          repo.markMessagesAsRead(widget.jobId, currentUser.id);
         }
       }
     });
@@ -120,86 +105,84 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
+    final picker = ImagePicker();
     final XFile? image = await picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 1024,
-      maxHeight: 1024,
+      maxWidth: 1280,
+      maxHeight: 1280,
       imageQuality: 85,
     );
 
-    if (image != null) {
-      setState(() {
-        _selectedImagePath = image.path;
-      });
+    if (image != null && mounted) {
+      setState(() => _selectedImagePath = image.path);
     }
   }
 
   Future<void> _sendMessage() async {
-    // Prevenir envíos múltiples
     if (_isSending) return;
-    
     if (_messageController.text.trim().isEmpty && _selectedImagePath == null) {
       return;
     }
 
+    final currentUser = context.read<UserService>().currentUser;
+    if (currentUser == null) return;
+
     setState(() => _isSending = true);
 
-    final currentUser = context.read<UserService>().currentUser;
-    if (currentUser == null) {
-      setState(() => _isSending = false);
-      return;
-    }
-
     try {
-      // Subir imagen a Cloudinary si existe
       String? imageUrl;
+
       if (_selectedImagePath != null) {
-        print('📤 Subiendo imagen del chat a Cloudinary...');
         imageUrl = await CloudinaryService.uploadImage(
           imagePath: _selectedImagePath!,
           folder: 'laboraya/messages',
         );
-        print('✅ Imagen subida: $imageUrl');
       }
 
       final message = MessageModel(
         id: const Uuid().v4(),
         jobId: widget.jobId,
         senderId: currentUser.id,
-        receiverId: widget.otherUserId, // ID del receptor
+        receiverId: widget.otherUserId,
         text: _messageController.text.trim(),
-        image: imageUrl, // URL de Cloudinary
+        image: imageUrl,
         createdAt: DateTime.now(),
-        isRead: false, // Mensaje no leído inicialmente
+        isRead: false,
       );
 
       await context.read<MessageService>().sendMessage(message);
-      _messageController.clear();
-      setState(() => _selectedImagePath = null);
 
-      _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    } catch (e) {
-      print('Error enviando mensaje: $e');
+      _messageController.clear();
+      setState(() {
+        _selectedImagePath = null;
+        _isTyping = false;
+      });
+
+      await Future.delayed(const Duration(milliseconds: 120));
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOut,
+        );
+      }
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Error al enviar mensaje'),
             backgroundColor: Colors.red,
           ),
         );
       }
     } finally {
-      setState(() => _isSending = false);
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
     }
   }
 
   Future<void> _makePhoneCall(String phoneNumber) async {
-    // Limpiar el número de teléfono
     final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
     final Uri phoneUri = Uri(scheme: 'tel', path: cleanPhone);
 
@@ -229,6 +212,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _showCallDialog() {
+    if (_otherUser == null || _otherUser!.phone.isEmpty) return;
     _makePhoneCall(_otherUser!.phone);
   }
 
@@ -236,11 +220,14 @@ class _ChatScreenState extends State<ChatScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+        ),
         title: Row(
-          children: [
-            const Icon(Icons.block, color: Colors.red),
-            const SizedBox(width: 8),
-            const Text('Bloquear usuario'),
+          children: const [
+            Icon(Icons.block_rounded, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Bloquear usuario'),
           ],
         ),
         content: Column(
@@ -272,12 +259,11 @@ class _ChatScreenState extends State<ChatScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              
+
               final currentUser = context.read<UserService>().currentUser;
               if (currentUser == null || _otherUser == null) return;
 
               try {
-                // Guardar bloqueo en Firebase
                 await FirebaseFirestore.instance.collection('blocked_users').add({
                   'blockerId': currentUser.id,
                   'blockedUserId': _otherUser!.id,
@@ -287,12 +273,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('${_otherUser?.name} ha sido bloqueado'),
+                      content: Text('${_otherUser!.name} ha sido bloqueado'),
                       backgroundColor: Colors.orange,
-                      duration: const Duration(seconds: 3),
                     ),
                   );
-                  // Volver atrás
                   Navigator.pop(context);
                 }
               } catch (e) {
@@ -306,7 +290,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 }
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Bloquear'),
           ),
         ],
@@ -318,11 +305,14 @@ class _ChatScreenState extends State<ChatScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+        ),
         title: Row(
-          children: [
-            const Icon(Icons.flag, color: Colors.orange),
-            const SizedBox(width: 8),
-            const Text('Reportar usuario'),
+          children: const [
+            Icon(Icons.flag_rounded, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Reportar usuario'),
           ],
         ),
         content: Column(
@@ -351,10 +341,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   backgroundColor: Colors.green,
                 ),
               );
-              // Aquí se implementaría el reporte real
-              // Navigator.push(context, MaterialPageRoute(builder: (_) => ReportScreen(...)));
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Reportar'),
           ),
         ],
@@ -365,219 +356,82 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUser = context.watch<UserService>().currentUser;
-    final messageRepo = context.read<MessageService>().repository as FirebaseMessageRepository;
+    final messageRepo =
+        context.read<MessageService>().repository as FirebaseMessageRepository;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: _otherUser != null
-            ? GestureDetector(
-                onTap: () {
-                  if (_otherUser != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => UserProfileScreen(user: _otherUser!),
-                      ),
-                    );
-                  }
-                },
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: AppColors.primary,
-                      backgroundImage: _otherUser?.photo != null
-                          ? NetworkImage(_otherUser!.photo!)
-                          : null,
-                      child: _otherUser?.photo == null && _otherUser != null
-                          ? Text(
-                              Helpers.getInitials(_otherUser!.name),
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.white,
-                              ),
-                            )
-                          : null,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _otherUser?.name ?? 'Cargando...',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          if (_otherUser != null)
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.star,
-                                  size: 12,
-                                  color: AppColors.urgent,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${_otherUser!.rating.toStringAsFixed(1)} • ${_otherUser!.completedJobs} trabajos',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            : const Text('Chat'),
-        actions: [
-          if (_otherUser != null)
-            IconButton(
-              icon: const Icon(Icons.phone),
-              onPressed: _showCallDialog,
-              tooltip: 'Llamar',
-            ),
-          if (_otherUser != null)
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (value) {
-                if (value == 'block') {
-                  _showBlockDialog();
-                } else if (value == 'report') {
-                  _showReportDialog();
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'block',
-                  child: Row(
-                    children: [
-                      Icon(Icons.block, color: Colors.red, size: 20),
-                      SizedBox(width: 12),
-                      Text('Bloquear usuario'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'report',
-                  child: Row(
-                    children: [
-                      Icon(Icons.flag, color: Colors.orange, size: 20),
-                      SizedBox(width: 12),
-                      Text('Reportar'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
+      backgroundColor:
+          isDark ? const Color(0xFF111315) : const Color(0xFFF6F8FC),
       body: Column(
         children: [
+          _ChatHeader(
+            otherUser: _otherUser,
+            onBack: () => Navigator.pop(context),
+            onOpenProfile: () {
+              if (_otherUser != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => UserProfileScreen(user: _otherUser!),
+                  ),
+                );
+              }
+            },
+            onCall: _otherUser != null ? _showCallDialog : null,
+            onBlock: _otherUser != null ? _showBlockDialog : null,
+            onReport: _otherUser != null ? _showReportDialog : null,
+          ),
           Expanded(
             child: StreamBuilder<List<MessageModel>>(
               stream: messageRepo.getMessagesStream(widget.jobId),
-              initialData: _cachedMessages, // Usar mensajes cargados como datos iniciales
+              initialData: _cachedMessages,
               builder: (context, snapshot) {
-                // Si tenemos datos (de caché o stream), mostrarlos inmediatamente
                 if (snapshot.hasData) {
                   final messages = snapshot.data!;
-                  
+
                   if (messages.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.chat_bubble_outline,
-                            size: 64,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No hay mensajes aún',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '¡Envía el primer mensaje!',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
+                    return _EmptyChatState(isDark: isDark);
                   }
 
                   return ListView.builder(
                     controller: _scrollController,
                     reverse: true,
-                    padding: const EdgeInsets.all(AppSizes.paddingMedium),
+                    padding: const EdgeInsets.fromLTRB(14, 16, 14, 10),
                     itemCount: messages.length,
-                    cacheExtent: 500,
+                    cacheExtent: 600,
                     itemBuilder: (context, index) {
                       final message = messages[messages.length - 1 - index];
                       final isMe = message.senderId == currentUser?.id;
 
                       return _MessageBubble(
+                        key: ValueKey(message.id),
                         message: message,
                         isMe: isMe,
-                        key: ValueKey(message.id),
                       );
                     },
                   );
                 }
 
-                // Solo mostrar loading si NO tenemos datos en absoluto
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 40,
-                          height: 40,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 3,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Cargando mensajes...',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
+                  return const Center(
+                    child: CircularProgressIndicator(),
                   );
                 }
 
                 if (snapshot.hasError) {
-                  print('❌ Error cargando mensajes: ${snapshot.error}');
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                        const SizedBox(height: 16),
+                        const Icon(
+                          Icons.error_outline_rounded,
+                          size: 48,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(height: 14),
                         const Text('Error al cargar mensajes'),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         ElevatedButton(
                           onPressed: () => setState(() {}),
                           child: const Text('Reintentar'),
@@ -587,113 +441,530 @@ class _ChatScreenState extends State<ChatScreen> {
                   );
                 }
 
-                // Fallback
                 return const SizedBox.shrink();
               },
             ),
           ),
-          // Preview de imagen seleccionada
           if (_selectedImagePath != null)
-            Container(
-              padding: const EdgeInsets.all(8),
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.grey[850]
-                  : Colors.grey[200],
+            _SelectedImagePreview(
+              imagePath: _selectedImagePath!,
+              onRemove: () {
+                setState(() => _selectedImagePath = null);
+              },
+            ),
+          _ChatInputBar(
+            controller: _messageController,
+            isTyping: _isTyping,
+            isSending: _isSending,
+            hasImage: _selectedImagePath != null,
+            onPickImage: _pickImage,
+            onSend: _sendMessage,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChatHeader extends StatelessWidget {
+  final UserModel? otherUser;
+  final VoidCallback onBack;
+  final VoidCallback onOpenProfile;
+  final VoidCallback? onCall;
+  final VoidCallback? onBlock;
+  final VoidCallback? onReport;
+
+  const _ChatHeader({
+    required this.otherUser,
+    required this.onBack,
+    required this.onOpenProfile,
+    required this.onCall,
+    required this.onBlock,
+    required this.onReport,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 52, 14, 18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary,
+            AppColors.primary.withOpacity(0.88),
+            const Color(0xFF67C4FF),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.22),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          _GlassIconButton(
+            icon: Icons.arrow_back_ios_new_rounded,
+            onTap: onBack,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: GestureDetector(
+              onTap: otherUser != null ? onOpenProfile : null,
               child: Row(
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.file(
-                      File(_selectedImagePath!),
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                    ),
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: Colors.white.withOpacity(0.18),
+                    backgroundImage:
+                        otherUser?.photo != null && otherUser!.photo!.isNotEmpty
+                            ? NetworkImage(otherUser!.photo!)
+                            : null,
+                    child: (otherUser?.photo == null ||
+                            otherUser!.photo!.isEmpty)
+                        ? Text(
+                            otherUser != null
+                                ? Helpers.getInitials(otherUser!.name)
+                                : '...',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          )
+                        : null,
                   ),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text('Imagen seleccionada'),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () {
-                      setState(() => _selectedImagePath = null);
-                    },
-                  ),
-                ],
-              ),
-            ),
-          Container(
-            padding: const EdgeInsets.all(AppSizes.paddingMedium),
-            decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.grey[850]
-                  : AppColors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 5,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.image),
-                    onPressed: _pickImage,
-                    color: AppColors.primary,
-                  ),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      style: TextStyle(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white
-                            : Colors.black,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Escribe un mensaje...',
-                        hintStyle: TextStyle(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.grey[500]
-                              : Colors.grey[600],
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppSizes.borderRadius),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.grey[800]
-                            : AppColors.background,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                      ),
-                      maxLines: null,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendMessage(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: Icon(
-                      _isTyping || _selectedImagePath != null
-                          ? Icons.send
-                          : Icons.send_outlined,
-                    ),
-                    onPressed: _isSending ? null : _sendMessage, // Deshabilitar si está enviando
-                    color: _isSending ? AppColors.grey : AppColors.primary,
+                    child: otherUser == null
+                        ? const Text(
+                            'Cargando...',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                otherUser!.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    size: 13,
+                                    color: Colors.amber,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      '${otherUser!.rating.toStringAsFixed(1)} • ${otherUser!.completedJobs} trabajos',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 11.5,
+                                        color: Colors.white70,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                   ),
                 ],
               ),
             ),
           ),
+          const SizedBox(width: 8),
+          if (onCall != null)
+            _GlassIconButton(
+              icon: Icons.phone_rounded,
+              onTap: onCall!,
+            ),
+          if (onBlock != null && onReport != null)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              onSelected: (value) {
+                if (value == 'block') {
+                  onBlock!();
+                } else if (value == 'report') {
+                  onReport!();
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: 'block',
+                  child: Row(
+                    children: [
+                      Icon(Icons.block_rounded, color: Colors.red, size: 20),
+                      SizedBox(width: 10),
+                      Text('Bloquear usuario'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'report',
+                  child: Row(
+                    children: [
+                      Icon(Icons.flag_rounded, color: Colors.orange, size: 20),
+                      SizedBox(width: 10),
+                      Text('Reportar'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
         ],
+      ),
+    );
+  }
+}
+
+class _GlassIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _GlassIconButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withOpacity(0.16),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: SizedBox(
+          height: 42,
+          width: 42,
+          child: Icon(
+            icon,
+            color: Colors.white,
+            size: 18,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyChatState extends StatelessWidget {
+  final bool isDark;
+
+  const _EmptyChatState({
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 30),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1B1E22) : Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.16 : 0.04),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withOpacity(0.05)
+                : const Color(0xFFE8EEF6),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 90,
+              width: 90,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primary.withOpacity(0.14),
+                    AppColors.primary.withOpacity(0.08),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(28),
+              ),
+              child: const Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 42,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'No hay mensajes aún',
+              style: TextStyle(
+                fontSize: 21,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white : const Color(0xFF162033),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Empieza la conversación y coordina los detalles del trabajo.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14.5,
+                height: 1.5,
+                color: isDark ? Colors.white70 : const Color(0xFF5D6A79),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectedImagePreview extends StatelessWidget {
+  final String imagePath;
+  final VoidCallback onRemove;
+
+  const _SelectedImagePreview({
+    required this.imagePath,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1B1E22) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.16 : 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Image.file(
+              File(imagePath),
+              width: 58,
+              height: 58,
+              fit: BoxFit.cover,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Imagen lista para enviar',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : const Color(0xFF162033),
+              ),
+            ),
+          ),
+          Material(
+            color: Colors.red.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: onRemove,
+              child: const SizedBox(
+                height: 40,
+                width: 40,
+                child: Icon(
+                  Icons.close_rounded,
+                  color: Colors.red,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChatInputBar extends StatelessWidget {
+  final TextEditingController controller;
+  final bool isTyping;
+  final bool isSending;
+  final bool hasImage;
+  final VoidCallback onPickImage;
+  final VoidCallback onSend;
+
+  const _ChatInputBar({
+    required this.controller,
+    required this.isTyping,
+    required this.isSending,
+    required this.hasImage,
+    required this.onPickImage,
+    required this.onSend,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111315) : const Color(0xFFF6F8FC),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1B1E22) : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withOpacity(0.05)
+                  : const Color(0xFFE8EEF6),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.18 : 0.05),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Material(
+                color: AppColors.primary.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: onPickImage,
+                  child: const SizedBox(
+                    height: 42,
+                    width: 42,
+                    child: Icon(
+                      Icons.image_outlined,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  maxLines: 5,
+                  minLines: 1,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black87,
+                    fontSize: 15,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Escribe un mensaje...',
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.grey[500] : Colors.grey[600],
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 2,
+                      vertical: 10,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                decoration: BoxDecoration(
+                  gradient: (isTyping || hasImage)
+                      ? const LinearGradient(
+                          colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
+                        )
+                      : null,
+                  color: (isTyping || hasImage)
+                      ? null
+                      : Colors.grey.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: (isTyping || hasImage)
+                      ? [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.24),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onTap: isSending ? null : onSend,
+                    child: SizedBox(
+                      height: 46,
+                      width: 46,
+                      child: Center(
+                        child: isSending
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Icon(
+                                Icons.send_rounded,
+                                color: (isTyping || hasImage)
+                                    ? Colors.white
+                                    : Colors.grey[700],
+                                size: 20,
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -704,7 +975,7 @@ class _MessageBubble extends StatelessWidget {
   final bool isMe;
 
   const _MessageBubble({
-    super.key, // Agregado key
+    super.key,
     required this.message,
     required this.isMe,
   });
@@ -712,86 +983,115 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 10,
-        ),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.7,
-        ),
-        decoration: BoxDecoration(
-          color: isMe 
-              ? AppColors.primary 
-              : (isDark ? Colors.grey[800] : Colors.grey[200]),
-          borderRadius: BorderRadius.circular(16),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 10),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            // Mostrar imagen si existe
-            if (message.image != null) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: message.image!.startsWith('http')
-                    ? Image.network(
-                        message.image!,
-                        width: 200,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Container(
-                            width: 200,
-                            height: 150,
-                            alignment: Alignment.center,
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                  : null,
-                            ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 200,
-                            height: 150,
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.error),
-                          );
-                        },
+            Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.72,
+              ),
+              padding: EdgeInsets.all(
+                (message.image != null && message.image!.isNotEmpty) ? 8 : 14,
+              ),
+              decoration: BoxDecoration(
+                gradient: isMe
+                    ? const LinearGradient(
+                        colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       )
-                    : Image.file(
-                        File(message.image!),
-                        width: 200,
-                        fit: BoxFit.cover,
-                      ),
-              ),
-              if (message.text.isNotEmpty) const SizedBox(height: 8),
-            ],
-            // Mostrar texto si existe
-            if (message.text.isNotEmpty)
-              Text(
-                message.text,
-                style: TextStyle(
-                  color: isMe 
-                      ? AppColors.white 
-                      : (isDark ? Colors.white : AppColors.black),
-                  fontSize: 15,
-                ),
-              ),
-            const SizedBox(height: 4),
-            Text(
-              Helpers.formatTime(message.createdAt),
-              style: TextStyle(
+                    : null,
                 color: isMe
-                    ? AppColors.white.withOpacity(0.7)
-                    : AppColors.grey,
-                fontSize: 11,
+                    ? null
+                    : (isDark ? const Color(0xFF1B1E22) : Colors.white),
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: Radius.circular(isMe ? 20 : 6),
+                  bottomRight: Radius.circular(isMe ? 6 : 20),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.16 : 0.04),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (message.image != null && message.image!.isNotEmpty) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: message.image!.startsWith('http')
+                          ? Image.network(
+                              message.image!,
+                              width: 220,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return Container(
+                                  width: 220,
+                                  height: 150,
+                                  alignment: Alignment.center,
+                                  child: CircularProgressIndicator(
+                                    value: progress.expectedTotalBytes != null
+                                        ? progress.cumulativeBytesLoaded /
+                                            progress.expectedTotalBytes!
+                                        : null,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: 220,
+                                  height: 150,
+                                  color: Colors.grey[300],
+                                  child: const Icon(
+                                    Icons.error_outline_rounded,
+                                  ),
+                                );
+                              },
+                            )
+                          : Image.file(
+                              File(message.image!),
+                              width: 220,
+                              fit: BoxFit.cover,
+                            ),
+                    ),
+                    if (message.text.isNotEmpty) const SizedBox(height: 10),
+                  ],
+                  if (message.text.isNotEmpty)
+                    Text(
+                      message.text,
+                      style: TextStyle(
+                        color: isMe
+                            ? Colors.white
+                            : (isDark ? Colors.white : const Color(0xFF162033)),
+                        fontSize: 14.5,
+                        height: 1.45,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                Helpers.formatTime(message.createdAt),
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],

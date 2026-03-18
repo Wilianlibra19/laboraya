@@ -1,12 +1,14 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+
 import '../../core/models/user_model.dart';
 import '../../core/services/user_service.dart';
 import '../../utils/constants.dart';
-import '../../widgets/common/custom_button.dart';
 import '../../utils/helpers.dart';
+import '../../widgets/common/custom_button.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -17,11 +19,12 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
+
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   late TextEditingController _districtController;
   late TextEditingController _descriptionController;
-  
+
   String _selectedAvailability = 'Disponible';
   List<String> _skills = [];
   String? _photoPath;
@@ -50,8 +53,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(
+    final picker = ImagePicker();
+    final image = await picker.pickImage(
       source: ImageSource.gallery,
       maxWidth: 512,
       maxHeight: 512,
@@ -68,38 +71,56 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       context: context,
       builder: (context) {
         final controller = TextEditingController();
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+
         return AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF1B1E22) : Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(22),
           ),
+          titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+          contentPadding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+          actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
           title: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.add_circle_outline,
-                  color: AppColors.primary,
-                ),
+              _MiniIconBubble(
+                icon: Icons.add_circle_outline_rounded,
+                color: AppColors.primary,
+                backgroundColor: AppColors.primary.withOpacity(0.10),
               ),
               const SizedBox(width: 12),
-              const Text('Agregar Habilidad'),
+              Expanded(
+                child: Text(
+                  'Agregar habilidad',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : const Color(0xFF162033),
+                  ),
+                ),
+              ),
             ],
           ),
           content: TextField(
             controller: controller,
-            decoration: InputDecoration(
-              hintText: 'Ej: Construcción, Pintura, etc.',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-              fillColor: AppColors.background,
-            ),
             textCapitalization: TextCapitalization.words,
+            style: TextStyle(
+              color: isDark ? Colors.white : const Color(0xFF162033),
+            ),
+            decoration: InputDecoration(
+              hintText: 'Ej: Construcción, Pintura, Delivery...',
+              hintStyle: TextStyle(color: Colors.grey[500]),
+              filled: true,
+              fillColor: isDark ? const Color(0xFF24282D) : const Color(0xFFF7F9FC),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
+            ),
           ),
           actions: [
             TextButton(
@@ -108,16 +129,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                if (controller.text.isNotEmpty) {
-                  setState(() => _skills.add(controller.text));
+                final value = controller.text.trim();
+                if (value.isNotEmpty && !_skills.contains(value)) {
+                  setState(() => _skills.add(value));
+                  Navigator.pop(context);
+                } else if (value.isNotEmpty) {
                   Navigator.pop(context);
                 }
               },
               style: ElevatedButton.styleFrom(
+                elevation: 0,
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               child: const Text('Agregar'),
@@ -136,24 +161,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     try {
       String? photoUrl = _photoPath;
 
-      // Si hay una foto nueva (ruta local), subirla a Cloudinary
-      if (_photoPath != null && 
-          _photoPath!.isNotEmpty && 
+      if (_photoPath != null &&
+          _photoPath!.isNotEmpty &&
           !_photoPath!.startsWith('http')) {
-        print('📤 Subiendo foto de perfil a Cloudinary...');
-        print('Ruta de la imagen: $_photoPath');
-        
         try {
           photoUrl = await context.read<UserService>().uploadProfilePhoto(_photoPath!);
-          
+
           if (photoUrl == null || photoUrl.isEmpty) {
             throw Exception('No se pudo subir la imagen a Cloudinary');
           }
-          
-          print('✅ Foto subida exitosamente: $photoUrl');
         } catch (uploadError) {
-          print('❌ Error al subir foto: $uploadError');
-          
           if (mounted) {
             setState(() => _isLoading = false);
             ScaffoldMessenger.of(context).showSnackBar(
@@ -164,23 +181,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
             );
           }
-          return; // No continuar si falla la subida
+          return;
         }
       }
 
       final user = context.read<UserService>().currentUser!;
       final updatedUser = UserModel(
         id: user.id,
-        name: _nameController.text,
+        name: _nameController.text.trim(),
         photo: photoUrl,
-        phone: _phoneController.text,
+        phone: _phoneController.text.trim(),
         email: user.email,
-        district: _districtController.text,
+        district: _districtController.text.trim(),
         rating: user.rating,
         completedJobs: user.completedJobs,
         skills: _skills,
         availability: _selectedAvailability,
-        description: _descriptionController.text,
+        description: _descriptionController.text.trim(),
         documents: user.documents,
         createdAt: user.createdAt,
       );
@@ -193,22 +210,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           SnackBar(
             content: const Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.white),
+                Icon(Icons.check_circle_rounded, color: Colors.white),
                 SizedBox(width: 12),
-                Text('Perfil actualizado exitosamente'),
+                Expanded(child: Text('Perfil actualizado exitosamente')),
               ],
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(14),
             ),
           ),
         );
         Navigator.pop(context);
       }
     } catch (e) {
-      print('❌ Error general al actualizar perfil: $e');
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -222,474 +238,448 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  Widget _buildSectionHeader({
-    required IconData icon,
-    required String title,
-    required Color color,
-    Widget? action,
-  }) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: color, size: 24),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ),
-        if (action != null) action,
-      ],
-    );
-  }
+  List<String> get _availabilityOptions => const [
+        'Disponible',
+        'No disponible',
+        'Disponible fines de semana',
+        'Disponible entre semana',
+      ];
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDark ? Colors.grey[850] : Colors.white;
 
     return Scaffold(
-      backgroundColor: isDark ? Colors.grey[900] : Colors.grey[50],
-      appBar: AppBar(
-        title: const Text('Editar Perfil'),
-        elevation: 0,
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+      backgroundColor: isDark ? const Color(0xFF111315) : const Color(0xFFF6F8FC),
+      body: SafeArea(
+        child: Column(
           children: [
-            // Foto de perfil con diseño mejorado
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.primary,
-                    AppColors.primary.withOpacity(0.7),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Stack(
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white,
-                            width: 4,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 20,
-                              spreadRadius: 5,
-                            ),
-                          ],
-                        ),
-                        child: CircleAvatar(
-                          radius: 70,
-                          backgroundColor: Colors.white,
-                          backgroundImage: _photoPath != null && _photoPath!.isNotEmpty
-                              ? (_photoPath!.startsWith('http')
-                                  ? NetworkImage(_photoPath!)
-                                  : FileImage(File(_photoPath!)) as ImageProvider)
-                              : null,
-                          child: _photoPath == null || _photoPath!.isEmpty
-                              ? Text(
-                                  Helpers.getInitials(_nameController.text),
-                                  style: const TextStyle(
-                                    fontSize: 40,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primary,
-                                  ),
-                                )
-                              : null,
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: _pickImage,
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Colors.white, Colors.white],
-                              ),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt,
-                              color: AppColors.primary,
-                              size: 24,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Toca el ícono para cambiar tu foto',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Información básica
-            _buildCard(
-              cardColor: cardColor!,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader(
-                    icon: Icons.person_outline,
-                    title: 'Información Básica',
-                    color: Colors.blue,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildTextField(
-                    controller: _nameController,
-                    label: 'Nombre completo',
-                    icon: Icons.person,
-                    isDark: isDark,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: _phoneController,
-                    label: 'Teléfono',
-                    icon: Icons.phone,
-                    isDark: isDark,
-                    keyboardType: TextInputType.phone,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: _districtController,
-                    label: 'Distrito',
-                    icon: Icons.location_on,
-                    isDark: isDark,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Descripción
-            _buildCard(
-              cardColor: cardColor,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader(
-                    icon: Icons.description_outlined,
-                    title: 'Sobre ti',
-                    color: Colors.green,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildTextField(
-                    controller: _descriptionController,
-                    label: 'Descripción',
-                    hint: 'Cuéntanos sobre tu experiencia y habilidades...',
-                    icon: Icons.edit,
-                    isDark: isDark,
-                    maxLines: 5,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Habilidades
-            _buildCard(
-              cardColor: cardColor,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader(
-                    icon: Icons.star_outline,
-                    title: 'Habilidades',
-                    color: Colors.orange,
-                    action: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: IconButton(
-                        onPressed: _addSkill,
-                        icon: const Icon(Icons.add_circle),
-                        color: Colors.orange,
-                        iconSize: 28,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (_skills.isEmpty)
+            _buildHeader(isDark),
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+                  children: [
+                    _buildPhotoCard(isDark),
+                    const SizedBox(height: 16),
+                    _buildBasicInfoCard(isDark),
+                    const SizedBox(height: 16),
+                    _buildAboutCard(isDark),
+                    const SizedBox(height: 16),
+                    _buildSkillsCard(isDark),
+                    const SizedBox(height: 16),
+                    _buildAvailabilityCard(isDark),
+                    const SizedBox(height: 24),
                     Container(
-                      padding: const EdgeInsets.all(32),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.grey[800] : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-                          style: BorderStyle.solid,
-                          width: 2,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.lightbulb_outline,
-                            size: 48,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No has agregado habilidades',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextButton.icon(
-                            onPressed: _addSkill,
-                            icon: const Icon(Icons.add),
-                            label: const Text('Agregar primera habilidad'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: Colors.orange,
-                            ),
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.28),
+                            blurRadius: 16,
+                            offset: const Offset(0, 8),
                           ),
                         ],
                       ),
-                    )
-                  else
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _skills
-                          .map((skill) => Container(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 150, // Limitar ancho máximo
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.orange.withOpacity(0.1),
-                                      Colors.orange.withOpacity(0.05),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.orange.withOpacity(0.3),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        skill,
-                                        style: const TextStyle(
-                                          color: Colors.orange,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    GestureDetector(
-                                      onTap: () {
-                                        setState(() => _skills.remove(skill));
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.all(2),
-                                        decoration: BoxDecoration(
-                                          color: Colors.orange.withOpacity(0.2),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.close,
-                                          size: 16,
-                                          color: Colors.orange,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ))
-                          .toList(),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Disponibilidad
-            _buildCard(
-              cardColor: cardColor,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader(
-                    icon: Icons.calendar_today_outlined,
-                    title: 'Disponibilidad',
-                    color: Colors.purple,
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.grey[800] : Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                      child: CustomButton(
+                        text: 'Guardar cambios',
+                        onPressed: _saveProfile,
+                        isLoading: _isLoading,
+                        icon: Icons.check_circle_outline_rounded,
                       ),
                     ),
-                    child: DropdownButtonFormField<String>(
-                      value: _selectedAvailability,
-                      isExpanded: true,
-                      decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.access_time),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
-                        ),
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'Disponible',
-                          child: Text(
-                            'Disponible',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: 'No disponible',
-                          child: Text(
-                            'No disponible',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Disponible fines de semana',
-                          child: Text(
-                            'Disponible fines de semana',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Disponible entre semana',
-                          child: Text(
-                            'Disponible entre semana',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _selectedAvailability = value);
-                        }
-                      },
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Botón guardar con diseño mejorado
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: CustomButton(
-                text: 'Guardar Cambios',
-                onPressed: _saveProfile,
-                isLoading: _isLoading,
-                icon: Icons.check_circle_outline,
-              ),
-            ),
-            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCard({
-    required Color cardColor,
-    required Widget child,
-  }) {
+  Widget _buildHeader(bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
       decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary,
+            AppColors.primary.withOpacity(0.90),
+            const Color(0xFF67C4FF),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.primary.withOpacity(0.22),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: child,
+      child: Row(
+        children: [
+          Material(
+            color: Colors.white.withOpacity(0.16),
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () => Navigator.pop(context),
+              child: const SizedBox(
+                height: 42,
+                width: 42,
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Editar perfil',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Actualiza tu información profesional',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhotoCard(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary,
+            AppColors.primary.withOpacity(0.88),
+            const Color(0xFF67C4FF),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.24),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 4),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.16),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: CircleAvatar(
+                  radius: 58,
+                  backgroundColor: Colors.white,
+                  backgroundImage: _photoPath != null && _photoPath!.isNotEmpty
+                      ? (_photoPath!.startsWith('http')
+                          ? NetworkImage(_photoPath!)
+                          : FileImage(File(_photoPath!)) as ImageProvider)
+                      : null,
+                  child: _photoPath == null || _photoPath!.isEmpty
+                      ? Text(
+                          Helpers.getInitials(_nameController.text),
+                          style: const TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      : null,
+                ),
+              ),
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Material(
+                  color: Colors.white,
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: _pickImage,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt_rounded,
+                        color: AppColors.primary,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Toca el ícono para cambiar tu foto',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBasicInfoCard(bool isDark) {
+    return _SectionCard(
+      isDark: isDark,
+      title: 'Información básica',
+      icon: Icons.person_outline_rounded,
+      iconColor: Colors.blue,
+      child: Column(
+        children: [
+          _buildTextField(
+            controller: _nameController,
+            label: 'Nombre completo',
+            icon: Icons.person_outline_rounded,
+            isDark: isDark,
+          ),
+          const SizedBox(height: 14),
+          _buildTextField(
+            controller: _phoneController,
+            label: 'Teléfono',
+            icon: Icons.phone_outlined,
+            isDark: isDark,
+            keyboardType: TextInputType.phone,
+          ),
+          const SizedBox(height: 14),
+          _buildTextField(
+            controller: _districtController,
+            label: 'Distrito',
+            icon: Icons.location_on_outlined,
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAboutCard(bool isDark) {
+    return _SectionCard(
+      isDark: isDark,
+      title: 'Sobre ti',
+      icon: Icons.description_outlined,
+      iconColor: Colors.green,
+      child: _buildTextField(
+        controller: _descriptionController,
+        label: 'Descripción',
+        hint: 'Cuéntanos sobre tu experiencia y habilidades...',
+        icon: Icons.edit_note_rounded,
+        isDark: isDark,
+        maxLines: 5,
+      ),
+    );
+  }
+
+  Widget _buildSkillsCard(bool isDark) {
+    return _SectionCard(
+      isDark: isDark,
+      title: 'Habilidades',
+      icon: Icons.star_outline_rounded,
+      iconColor: Colors.orange,
+      action: Material(
+        color: Colors.orange.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(999),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: _addSkill,
+          child: const Padding(
+            padding: EdgeInsets.all(8),
+            child: Icon(
+              Icons.add_rounded,
+              color: Colors.orange,
+              size: 22,
+            ),
+          ),
+        ),
+      ),
+      child: _skills.isEmpty
+          ? Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF24282D) : const Color(0xFFF7F9FC),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.05)
+                      : const Color(0xFFE8EEF6),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.lightbulb_outline_rounded,
+                    size: 42,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'No has agregado habilidades',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton.icon(
+                    onPressed: _addSkill,
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Agregar primera habilidad'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _skills.map((skill) {
+                return Container(
+                  constraints: const BoxConstraints(maxWidth: 170),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: Colors.orange.withOpacity(0.18),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          skill,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: const TextStyle(
+                            color: Colors.orange,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() => _skills.remove(skill));
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.18),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            size: 14,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+    );
+  }
+
+  Widget _buildAvailabilityCard(bool isDark) {
+    return _SectionCard(
+      isDark: isDark,
+      title: 'Disponibilidad',
+      icon: Icons.calendar_today_outlined,
+      iconColor: Colors.purple,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: _availabilityOptions.map((option) {
+          final selected = _selectedAvailability == option;
+          return GestureDetector(
+            onTap: () {
+              setState(() => _selectedAvailability = option);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: selected
+                    ? Colors.purple.withOpacity(0.12)
+                    : (isDark ? const Color(0xFF24282D) : const Color(0xFFF7F9FC)),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: selected ? Colors.purple : Colors.transparent,
+                  width: 1.5,
+                ),
+              ),
+              child: Text(
+                option,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: selected
+                      ? Colors.purple
+                      : (isDark ? Colors.white : const Color(0xFF162033)),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 
@@ -704,37 +694,133 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }) {
     return TextFormField(
       controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      style: TextStyle(
+        color: isDark ? Colors.white : const Color(0xFF162033),
+      ),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
+        hintStyle: TextStyle(color: Colors.grey[500]),
         prefixIcon: Icon(icon),
         alignLabelWithHint: maxLines > 1,
+        filled: true,
+        fillColor: isDark ? const Color(0xFF24282D) : const Color(0xFFF7F9FC),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-          ),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-          ),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(
             color: AppColors.primary,
-            width: 2,
+            width: 1.8,
           ),
         ),
-        filled: true,
-        fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 15,
+        ),
       ),
-      keyboardType: keyboardType,
-      maxLines: maxLines,
       validator: (value) =>
-          value?.isEmpty ?? true ? 'Campo requerido' : null,
+          value == null || value.trim().isEmpty ? 'Campo requerido' : null,
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  final bool isDark;
+  final String title;
+  final IconData icon;
+  final Color iconColor;
+  final Widget child;
+  final Widget? action;
+
+  const _SectionCard({
+    required this.isDark,
+    required this.title,
+    required this.icon,
+    required this.iconColor,
+    required this.child,
+    this.action,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1B1E22) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFE8EEF6),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.16 : 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _MiniIconBubble(
+                icon: icon,
+                color: iconColor,
+                backgroundColor: iconColor.withOpacity(0.10),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : const Color(0xFF162033),
+                  ),
+                ),
+              ),
+              if (action != null) action!,
+            ],
+          ),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniIconBubble extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final Color backgroundColor;
+
+  const _MiniIconBubble({
+    required this.icon,
+    required this.color,
+    required this.backgroundColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 40,
+      width: 40,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Icon(icon, color: color, size: 20),
     );
   }
 }
