@@ -46,6 +46,8 @@ class FirebaseUserRepository implements UserRepository {
         isDocumentVerified: data['isDocumentVerified'] ?? false,
         totalEarnings: (data['totalEarnings'] ?? 0.0).toDouble(),
         monthlyEarnings: (data['monthlyEarnings'] ?? 0.0).toDouble(),
+        totalReviews: data['totalReviews'] ?? 0,
+        credits: data['credits'] ?? 0,
       );
     } catch (e) {
       print('Error getting user: $e');
@@ -74,6 +76,8 @@ class FirebaseUserRepository implements UserRepository {
         'isDocumentVerified': user.isDocumentVerified,
         'totalEarnings': user.totalEarnings,
         'monthlyEarnings': user.monthlyEarnings,
+        'totalReviews': user.totalReviews,
+        'credits': user.credits,
       });
     } catch (e) {
       print('Error creating user: $e');
@@ -100,6 +104,8 @@ class FirebaseUserRepository implements UserRepository {
         'isDocumentVerified': user.isDocumentVerified,
         'totalEarnings': user.totalEarnings,
         'monthlyEarnings': user.monthlyEarnings,
+        'totalReviews': user.totalReviews,
+        'credits': user.credits,
       });
     } catch (e) {
       print('Error updating user: $e');
@@ -132,6 +138,8 @@ class FirebaseUserRepository implements UserRepository {
           isDocumentVerified: data['isDocumentVerified'] ?? false,
           totalEarnings: (data['totalEarnings'] ?? 0.0).toDouble(),
           monthlyEarnings: (data['monthlyEarnings'] ?? 0.0).toDouble(),
+          totalReviews: data['totalReviews'] ?? 0,
+          credits: data['credits'] ?? 0,
         );
       }).toList();
     } catch (e) {

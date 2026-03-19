@@ -6,10 +6,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../config/credits_config.dart';
 import '../../core/models/job_model.dart';
 import '../../core/services/cloudinary_service.dart';
 import '../../core/services/job_service.dart';
 import '../../core/services/location_service.dart';
+import '../../core/services/payment_service.dart';
 import '../../core/services/user_service.dart';
 import '../../data/mock/mock_data.dart';
 import '../../utils/constants.dart';
@@ -36,6 +38,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   String _selectedCategory = '';
   String _paymentType = 'Por trabajo completo';
   String _selectedDuration = 'Corto plazo (1-7 días)';
+  
+  // Tipo de publicación (Normal, Destacado, Premium)
+  String _jobTier = 'Normal';
 
   String _paymentFrequency = 'Pago único al finalizar';
   String _contractDuration = '1 mes';
@@ -175,6 +180,30 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         throw Exception('Usuario no autenticado');
       }
 
+      // Todas las publicaciones cuestan 10 créditos
+      const int creditCost = CreditsConfig.CREDITOS_POR_PUBLICACION;
+
+      // Verificar y descontar créditos
+      final paymentService = PaymentService();
+      final currentCredits = await paymentService.getUserCredits(currentUser.id);
+
+      if (currentCredits < creditCost) {
+        throw Exception(
+          'Créditos insuficientes. Tienes $currentCredits créditos, necesitas $creditCost.',
+        );
+      }
+
+      // Descontar créditos
+      final deductResult = await paymentService.deductCredits(
+        userId: currentUser.id,
+        credits: creditCost,
+        reason: 'Publicación de trabajo',
+      );
+
+      if (deductResult['success'] != true) {
+        throw Exception(deductResult['error'] ?? 'Error al descontar créditos');
+      }
+
       final payment = double.tryParse(_paymentController.text.trim());
       if (payment == null || payment <= 0) {
         throw Exception('Ingresa un monto válido');
@@ -216,7 +245,7 @@ Requisitos: ${_requirementsController.text.trim().isEmpty ? 'No especificado' : 
         address: _addressController.text.trim(),
         createdBy: currentUser.id,
         status: 'available',
-        isUrgent: false,
+        isUrgent: _jobTier == 'Premium',
         images: uploadedImageUrls,
         createdAt: DateTime.now(),
         documents: [],
@@ -226,15 +255,136 @@ Requisitos: ${_requirementsController.text.trim().isEmpty ? 'No especificado' : 
       await context.read<JobService>().createJob(job);
 
       if (mounted) {
+        // Mensaje de éxito
+        final successMessage = _isContract 
+          ? '✅ Contrato publicado\n💳 Se descontaron $creditCost créditos' 
+          : '✅ Trabajo publicado\n💳 Se descontaron $creditCost créditos';
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              _isContract ? '✅ Contrato publicado' : '✅ Trabajo publicado',
-            ),
+            content: Text(successMessage),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
           ),
         );
-        Navigator.pop(context, true);
+
+        // Mostrar diálogo informativo con créditos restantes
+        final remainingCredits = await PaymentService().getUserCredits(currentUser.id);
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    '¡Publicado!',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _isContract 
+                    ? 'Tu contrato ha sido publicado exitosamente.'
+                    : 'Tu trabajo ha sido publicado exitosamente.',
+                  style: const TextStyle(fontSize: 15),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.orange.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.account_balance_wallet,
+                        color: Colors.orange,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Créditos descontados',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.orange,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '-$creditCost créditos',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.orange,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Créditos restantes: $remainingCredits',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // Cerrar diálogo
+                  Navigator.pop(context, true); // Volver a la pantalla anterior
+                },
+                child: const Text(
+                  'Entendido',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -243,6 +393,7 @@ Requisitos: ${_requirementsController.text.trim().isEmpty ? 'No especificado' : 
           SnackBar(
             content: Text('Error: $e'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -268,6 +419,8 @@ Requisitos: ${_requirementsController.text.trim().isEmpty ? 'No especificado' : 
                     _buildModernToggle(isDark),
                     const SizedBox(height: 20),
                     _buildIntroBanner(isDark),
+                    const SizedBox(height: 20),
+                    _buildJobTierSelector(isDark),
                     const SizedBox(height: 20),
                     if (_isContract) ..._buildContractContent(isDark) else ..._buildQuickJobContent(isDark),
                     const SizedBox(height: 24),
@@ -405,6 +558,175 @@ Requisitos: ${_requirementsController.text.trim().isEmpty ? 'No especificado' : 
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildJobTierSelector(bool isDark) {
+    final tiers = [
+      {
+        'name': 'Normal',
+        'icon': Icons.work_outline_rounded,
+        'color': Colors.blue,
+        'features': ['Publicación estándar', 'Visible en búsquedas'],
+      },
+      {
+        'name': 'Destacado',
+        'icon': Icons.star_rounded,
+        'color': Colors.orange,
+        'features': ['Aparece arriba', 'Badge "Destacado"', 'Más visibilidad'],
+      },
+      {
+        'name': 'Premium',
+        'icon': Icons.workspace_premium_rounded,
+        'color': Colors.purple,
+        'features': ['Máxima prioridad', 'Badge "Premium"', 'Urgente', 'Destacado 7 días'],
+      },
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1B1E22) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFE8EEF6),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.16 : 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                height: 42,
+                width: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.rocket_launch_rounded, color: AppColors.primary, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tipo de publicación',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : const Color(0xFF162033),
+                      ),
+                    ),
+                    Text(
+                      'Todas cuestan ${CreditsConfig.CREDITOS_POR_PUBLICACION} créditos',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...tiers.map((tier) {
+            final isSelected = _jobTier == tier['name'];
+            final color = tier['color'] as Color;
+            final features = tier['features'] as List<String>;
+
+            return GestureDetector(
+              onTap: () => setState(() => _jobTier = tier['name'] as String),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? color.withOpacity(0.08)
+                      : (isDark ? const Color(0xFF24282D) : const Color(0xFFF7F9FC)),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: isSelected ? color : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      height: 48,
+                      width: 48,
+                      decoration: BoxDecoration(
+                        color: isSelected ? color : Colors.grey[400],
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        tier['icon'] as IconData,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            tier['name'] as String,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: isSelected
+                                  ? color
+                                  : (isDark ? Colors.white : const Color(0xFF162033)),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          ...features.map((feature) => Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle,
+                                      size: 14,
+                                      color: isSelected ? color : Colors.grey[600],
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      feature,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )),
+                        ],
+                      ),
+                    ),
+                    if (isSelected)
+                      Icon(
+                        Icons.check_circle_rounded,
+                        color: color,
+                        size: 28,
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );

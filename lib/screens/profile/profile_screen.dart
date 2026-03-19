@@ -6,9 +6,12 @@ import '../../core/services/user_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../auth/welcome_screen.dart';
+import '../credits/my_credits_screen.dart';
 import '../favorites/favorites_screen.dart';
 import '../legal/privacy_screen.dart';
 import '../legal/terms_screen.dart';
+import '../legal/privacy_policy_screen.dart';
+import '../legal/about_screen.dart';
 import '../referrals/referral_screen.dart';
 import '../settings/settings_screen.dart';
 import '../stats/earnings_stats_screen.dart';
@@ -154,6 +157,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           );
                         },
                       ),
+                      _MenuItemData(
+                        icon: Icons.stars_rounded,
+                        title: 'Mis Créditos',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const MyCreditsScreen()),
+                          );
+                        },
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -219,7 +232,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+                            MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+                          );
+                        },
+                      ),
+                      _MenuItemData(
+                        icon: Icons.info_outline_rounded,
+                        title: 'Acerca de LaboraYa',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const AboutScreen()),
                           );
                         },
                       ),

@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../core/services/user_service.dart';
 import '../../core/services/verification_service.dart';
+import '../../core/services/dni_verification_service.dart';
 import '../../core/services/cloudinary_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/common/custom_button.dart';
@@ -73,7 +74,35 @@ class _VerifyIdentityScreenState extends State<VerifyIdentityScreen> {
       final currentUser = context.read<UserService>().currentUser;
       if (currentUser == null) throw Exception('Usuario no autenticado');
 
-      // Subir imágenes a Cloudinary
+      final dni = _dniController.text.trim();
+
+      // 1. VERIFICAR DNI CON API DE RENIEC
+      print('🔍 Verificando DNI con RENIEC...');
+      final dniService = DniVerificationService();
+      final dniData = await dniService.verificarDNI(dni);
+
+      if (dniData == null) {
+        throw Exception('DNI no encontrado en RENIEC. Verifica que sea correcto.');
+      }
+
+      print('✅ DNI válido: ${dniData['nombreCompleto']}');
+
+      // 2. VERIFICAR QUE EL NOMBRE COINCIDA
+      final nombreCoincide = dniService.verificarNombreCoincide(
+        currentUser.name,
+        dniData['nombreCompleto'],
+      );
+
+      if (!nombreCoincide) {
+        throw Exception(
+          'El nombre de tu perfil (${currentUser.name}) no coincide con el DNI (${dniData['nombreCompleto']}). '
+          'Actualiza tu nombre en el perfil primero.',
+        );
+      }
+
+      print('✅ Nombre coincide');
+
+      // 3. SUBIR IMÁGENES A CLOUDINARY
       print('📤 Subiendo imágenes...');
       final frontUrl = await CloudinaryService.uploadImage(
         imagePath: _frontImagePath!,
@@ -94,21 +123,33 @@ class _VerifyIdentityScreenState extends State<VerifyIdentityScreen> {
         throw Exception('Error al subir imágenes');
       }
 
+      // 4. GUARDAR VERIFICACIÓN EN FIREBASE
       final verificationService = VerificationService();
       await verificationService.submitIdentityVerification(
         userId: currentUser.id,
-        dniNumber: _dniController.text,
+        dniNumber: dni,
         frontImageUrl: frontUrl,
         backImageUrl: backUrl,
         selfieUrl: selfieUrl,
       );
 
+      // 5. MARCAR USUARIO COMO VERIFICADO AUTOMÁTICAMENTE
+      await verificationService.markUserAsVerified(currentUser.id);
+      
+      // Actualizar usuario en memoria
+      await context.read<UserService>().refreshCurrentUser();
+
+      print('✅ Usuario verificado automáticamente');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Verificación enviada. La revisaremos en 24-48 horas.'),
+          SnackBar(
+            content: Text(
+              '✅ ¡Verificado! Tu DNI es válido.\n'
+              'Nombre: ${dniData['nombreCompleto']}',
+            ),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 4),
           ),
         );
         Navigator.pop(context);
@@ -116,7 +157,11 @@ class _VerifyIdentityScreenState extends State<VerifyIdentityScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     } finally {
@@ -155,12 +200,12 @@ class _VerifyIdentityScreenState extends State<VerifyIdentityScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Verificación de Identidad',
+                          'Verificación Automática',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Verifica tu identidad para obtener el badge verificado',
+                          'Tu DNI se verificará automáticamente con RENIEC en segundos',
                           style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                         ),
                       ],
@@ -230,7 +275,8 @@ class _VerifyIdentityScreenState extends State<VerifyIdentityScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Tu información será revisada por nuestro equipo. Te notificaremos cuando tu verificación sea aprobada.',
+              'Tu DNI se verificará automáticamente con la base de datos de RENIEC. '
+              'Asegúrate de que tu nombre en el perfil coincida con tu DNI.',
               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),

@@ -109,6 +109,7 @@ class UserService extends ChangeNotifier {
           totalEarnings: user.totalEarnings,
           monthlyEarnings: user.monthlyEarnings,
           totalReviews: user.totalReviews,
+          credits: user.credits,
         );
         await _repository.updateUser(updatedUser);
         

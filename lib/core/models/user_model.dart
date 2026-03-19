@@ -61,6 +61,9 @@ class UserModel extends HiveObject {
   @HiveField(18)
   int totalReviews;
 
+  @HiveField(19)
+  int credits;
+
   UserModel({
     required this.id,
     required this.name,
@@ -81,6 +84,7 @@ class UserModel extends HiveObject {
     this.totalEarnings = 0.0,
     this.monthlyEarnings = 0.0,
     this.totalReviews = 0,
+    this.credits = 0,
   });
 
   bool get isVerified => isDniVerified || isPhoneVerified || isDocumentVerified;
@@ -105,6 +109,7 @@ class UserModel extends HiveObject {
         'totalEarnings': totalEarnings,
         'monthlyEarnings': monthlyEarnings,
         'totalReviews': totalReviews,
+        'credits': credits,
       };
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
@@ -127,5 +132,6 @@ class UserModel extends HiveObject {
         totalEarnings: json['totalEarnings']?.toDouble() ?? 0.0,
         monthlyEarnings: json['monthlyEarnings']?.toDouble() ?? 0.0,
         totalReviews: json['totalReviews'] ?? 0,
+        credits: json['credits'] ?? 0,
       );
 }

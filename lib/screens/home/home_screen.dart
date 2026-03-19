@@ -14,6 +14,7 @@ import '../job/job_detail_screen.dart';
 import '../job/create_job_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../job/my_job_applications_screen.dart';
+import '../credits/my_credits_screen.dart';
 import 'category_jobs_screen.dart';
 import 'nearby_jobs_screen.dart';
 import 'filter_screen.dart';
@@ -673,6 +674,53 @@ class _PremiumHeader extends StatelessWidget {
                   ],
                 ),
               ),
+              // Indicador de créditos
+              Consumer<UserService>(
+                builder: (context, userService, _) {
+                  final credits = userService.currentUser?.credits ?? 0;
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MyCreditsScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.amber.withOpacity(0.4),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.stars_rounded,
+                            color: Colors.amber,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$credits',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
               StreamBuilder<int>(
                 stream: userId != null
                     ? JobApplicationService()

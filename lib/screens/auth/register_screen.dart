@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../config/credits_config.dart';
 import '../../core/models/user_model.dart';
 import '../../core/services/user_service.dart';
 import '../../core/services/notification_service.dart';
@@ -144,6 +145,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         description: 'Nuevo usuario en LaboraYa',
         documents: [],
         createdAt: DateTime.now(),
+        credits: CreditsConfig.CREDITOS_INICIALES, // 500 créditos gratis
       );
 
       await context.read<UserService>().createUser(newUser);
@@ -151,6 +153,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await NotificationService.saveUserToken(newUser.id);
 
       if (mounted) {
+        // Mostrar mensaje de bienvenida con créditos
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '🎉 ¡Bienvenido! Recibiste ${CreditsConfig.CREDITOS_INICIALES} créditos gratis',
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const OnboardingScreen()),
           (route) => false,

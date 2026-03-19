@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../config/credits_config.dart';
 import '../../core/services/referral_service.dart';
 import '../../core/services/user_service.dart';
 import '../../utils/constants.dart';
@@ -56,7 +57,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
     setState(() => _isLoading = false);
 
     if (success) {
-      _showMessage('¡Código aplicado! Has ganado S/ 10');
+      _showMessage('¡Código aplicado! Tu amigo ganó ${CreditsConfig.CREDITOS_POR_REFERIDO} créditos');
       _codeController.clear();
       _loadStats();
     } else {
@@ -90,7 +91,8 @@ class _ReferralScreenState extends State<ReferralScreen> {
 
     final myCode = (_stats!['code'] ?? '').toString();
     final referralCount = (_stats!['count'] ?? 0) as int;
-    final earnings = ((_stats!['earnings'] ?? 0) as num).toDouble();
+    final credits = (_stats!['credits'] ?? 0) as int;
+    final totalCredits = (_stats!['totalCredits'] ?? 1000) as int;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF111315) : const Color(0xFFF6F8FC),
@@ -106,7 +108,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
                   _buildHeroCard(
                     isDark: isDark,
                     referralCount: referralCount,
-                    earnings: earnings,
+                    credits: credits,
                   ),
                   const SizedBox(height: 16),
                   _buildCodeCard(
@@ -187,7 +189,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
   Widget _buildHeroCard({
     required bool isDark,
     required int referralCount,
-    required double earnings,
+    required int credits,
   }) {
     return Container(
       padding: const EdgeInsets.all(22),
@@ -236,7 +238,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Por cada amigo que use tu código, ambos ganan beneficios dentro de LaboraYa.',
+            'Por cada amigo que use tu código, ambos ganan 100 créditos dentro de LaboraYa.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14.5,
@@ -257,9 +259,9 @@ class _ReferralScreenState extends State<ReferralScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: _HeroStatCard(
-                  icon: Icons.attach_money_rounded,
-                  value: Helpers.formatCurrency(earnings),
-                  label: 'Ganado',
+                  icon: Icons.stars_rounded,
+                  value: '$credits',
+                  label: 'Créditos ganados',
                 ),
               ),
             ],
@@ -384,7 +386,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
                       borderRadius: BorderRadius.circular(16),
                       onTap: () {
                         Share.share(
-                          '¡Únete a LaboraYa con mi código $myCode y gana S/ 10! Descarga la app y encuentra trabajo fácilmente.',
+                          '¡Únete a LaboraYa con mi código $myCode y gana 100 créditos! Descarga la app y encuentra trabajo fácilmente.',
                         );
                       },
                       child: const Padding(
@@ -587,7 +589,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
           const _HowItWorksRow(
             number: '3',
             title: 'Ambos ganan',
-            description: 'Tú ganas S/ 10 y ellos también reciben beneficio.',
+            description: 'Tú ganas 100 créditos y ellos también reciben 100 créditos.',
           ),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
+import '../../config/credits_config.dart';
 
 class ReferralService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -17,7 +18,8 @@ class ReferralService {
     await _firestore.collection('users').doc(userId).update({
       'referralCode': code,
       'referralCount': 0,
-      'referralEarnings': 0.0,
+      'referralCredits': 0,
+      'credits': CreditsConfig.CREDITOS_INICIALES, // Créditos iniciales
     });
   }
 
@@ -41,16 +43,17 @@ class ReferralService {
       // Aplicar referido
       final batch = _firestore.batch();
 
-      // Actualizar usuario que usó el código
+      // Actualizar usuario que usó el código (NO recibe créditos extra, solo los iniciales)
       batch.update(_firestore.collection('users').doc(userId), {
         'usedReferralCode': referralCode.toUpperCase(),
         'referredBy': referrerId,
       });
 
-      // Actualizar contador del referidor
+      // Actualizar contador del referidor (dar 40 créditos)
       batch.update(_firestore.collection('users').doc(referrerId), {
         'referralCount': FieldValue.increment(1),
-        'referralEarnings': FieldValue.increment(10.0), // S/ 10 por referido
+        'referralCredits': FieldValue.increment(CreditsConfig.CREDITOS_POR_REFERIDO),
+        'credits': FieldValue.increment(CreditsConfig.CREDITOS_POR_REFERIDO), // Sumar a créditos totales
       });
 
       // Crear registro de referido
@@ -58,7 +61,7 @@ class ReferralService {
         'referrerId': referrerId,
         'referredUserId': userId,
         'code': referralCode.toUpperCase(),
-        'bonus': 10.0,
+        'bonusCredits': CreditsConfig.CREDITOS_POR_REFERIDO,
         'createdAt': Timestamp.now(),
       });
 
@@ -82,7 +85,8 @@ class ReferralService {
     return {
       'code': userData?['referralCode'] ?? '',
       'count': userData?['referralCount'] ?? 0,
-      'earnings': userData?['referralEarnings'] ?? 0.0,
+      'credits': userData?['referralCredits'] ?? 0,
+      'totalCredits': userData?['credits'] ?? CreditsConfig.CREDITOS_INICIALES,
       'referrals': referralsSnapshot.docs.length,
     };
   }

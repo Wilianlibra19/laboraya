@@ -256,7 +256,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const Spacer(),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(28),
+            padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF171A20) : Colors.white,
               borderRadius: BorderRadius.circular(32),
@@ -276,8 +276,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: Column(
               children: [
                 Container(
-                  width: 170,
-                  height: 170,
+                  width: 130,
+                  height: 130,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
@@ -291,8 +291,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   child: Center(
                     child: Container(
-                      width: 110,
-                      height: 110,
+                      width: 85,
+                      height: 85,
                       decoration: BoxDecoration(
                         color: page.color,
                         shape: BoxShape.circle,
@@ -306,34 +306,34 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                       child: Icon(
                         page.icon,
-                        size: 52,
+                        size: 42,
                         color: Colors.white,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 34),
+                const SizedBox(height: 24),
                 Text(
                   page.title,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 29,
+                    fontSize: 26,
                     height: 1.2,
                     fontWeight: FontWeight.w800,
                     color: isDark ? Colors.white : const Color(0xFF162033),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Text(
                   page.description,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 15.5,
-                    height: 1.6,
+                    fontSize: 14.5,
+                    height: 1.5,
                     color: isDark ? Colors.white70 : const Color(0xFF5D6A79),
                   ),
                 ),
-                const SizedBox(height: 26),
+                const SizedBox(height: 20),
                 _buildMiniHighlights(page),
               ],
             ),
