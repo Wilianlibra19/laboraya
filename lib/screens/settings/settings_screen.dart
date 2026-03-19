@@ -1,13 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/services/user_service.dart';
 import '../../utils/constants.dart';
-import '../auth/welcome_screen.dart';
 import 'blocked_users_screen.dart';
 import 'change_password_screen.dart';
+import 'delete_account_screen.dart';
 import 'notification_settings_screen.dart';
 import 'privacy_screen.dart';
 
@@ -425,319 +423,10 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
-    final passwordController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.warning_amber_rounded, color: Colors.red),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text('Eliminar cuenta'),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '⚠️ Esta acción es permanente',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: Colors.red,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: Colors.red.withOpacity(0.18),
-                ),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('• Se eliminarán todos tus datos'),
-                  SizedBox(height: 6),
-                  Text('• Perderás acceso a tus trabajos'),
-                  SizedBox(height: 6),
-                  Text('• No podrás recuperar tu cuenta'),
-                  SizedBox(height: 6),
-                  Text('• Se eliminarán tus calificaciones'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Confirma tu contraseña:',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: InputDecoration(
-                hintText: 'Contraseña',
-                prefixIcon: const Icon(Icons.lock_outline_rounded),
-                filled: true,
-                fillColor: Colors.grey.withOpacity(0.08),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              passwordController.dispose();
-              Navigator.pop(context);
-            },
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final password = passwordController.text.trim();
-
-              if (password.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Ingresa tu contraseña'),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-                return;
-              }
-
-              Navigator.pop(context);
-
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => AlertDialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  content: const Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
-                      Text('Eliminando cuenta...'),
-                    ],
-                  ),
-                ),
-              );
-
-              try {
-                final user = FirebaseAuth.instance.currentUser;
-                if (user == null || user.email == null) {
-                  throw Exception('Usuario no encontrado');
-                }
-
-                final userId = user.uid;
-
-                final credential = EmailAuthProvider.credential(
-                  email: user.email!,
-                  password: password,
-                );
-
-                await user.reauthenticateWithCredential(credential);
-
-                final firestore = FirebaseFirestore.instance;
-
-                final jobs = await firestore
-                    .collection('jobs')
-                    .where('createdBy', isEqualTo: userId)
-                    .get();
-                for (final doc in jobs.docs) {
-                  await doc.reference.delete();
-                }
-
-                final sentMessages = await firestore
-                    .collection('messages')
-                    .where('senderId', isEqualTo: userId)
-                    .get();
-                for (final doc in sentMessages.docs) {
-                  await doc.reference.delete();
-                }
-
-                final receivedMessages = await firestore
-                    .collection('messages')
-                    .where('receiverId', isEqualTo: userId)
-                    .get();
-                for (final doc in receivedMessages.docs) {
-                  await doc.reference.delete();
-                }
-
-                final notifications = await firestore
-                    .collection('notifications')
-                    .where('userId', isEqualTo: userId)
-                    .get();
-                for (final doc in notifications.docs) {
-                  await doc.reference.delete();
-                }
-
-                final applications = await firestore
-                    .collection('job_applications')
-                    .where('applicantId', isEqualTo: userId)
-                    .get();
-                for (final doc in applications.docs) {
-                  await doc.reference.delete();
-                }
-
-                final favorites = await firestore
-                    .collection('favorites')
-                    .where('userId', isEqualTo: userId)
-                    .get();
-                for (final doc in favorites.docs) {
-                  await doc.reference.delete();
-                }
-
-                final reports = await firestore
-                    .collection('reports')
-                    .where('reporterId', isEqualTo: userId)
-                    .get();
-                for (final doc in reports.docs) {
-                  await doc.reference.delete();
-                }
-
-                final reviews = await firestore
-                    .collection('reviews')
-                    .where('reviewerId', isEqualTo: userId)
-                    .get();
-                for (final doc in reviews.docs) {
-                  await doc.reference.delete();
-                }
-
-                final blocks = await firestore
-                    .collection('blocked_users')
-                    .where('blockerId', isEqualTo: userId)
-                    .get();
-                for (final doc in blocks.docs) {
-                  await doc.reference.delete();
-                }
-
-                final portfolio = await firestore
-                    .collection('portfolio')
-                    .where('userId', isEqualTo: userId)
-                    .get();
-                for (final doc in portfolio.docs) {
-                  await doc.reference.delete();
-                }
-
-                final verifications = await firestore
-                    .collection('verifications')
-                    .where('userId', isEqualTo: userId)
-                    .get();
-                for (final doc in verifications.docs) {
-                  await doc.reference.delete();
-                }
-
-                final referrals = await firestore
-                    .collection('referrals')
-                    .where('referrerId', isEqualTo: userId)
-                    .get();
-                for (final doc in referrals.docs) {
-                  await doc.reference.delete();
-                }
-
-                await firestore.collection('users').doc(userId).delete();
-                await user.delete();
-
-                await context.read<UserService>().logout();
-
-                if (context.mounted) {
-                  Navigator.pop(context);
-
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(
-                      builder: (_) => const WelcomeScreen(),
-                    ),
-                    (route) => false,
-                  );
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Cuenta y todos los datos eliminados exitosamente',
-                      ),
-                      backgroundColor: Colors.green,
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
-                }
-              } on FirebaseAuthException catch (e) {
-                if (context.mounted) {
-                  Navigator.pop(context);
-
-                  String message = 'Error al eliminar cuenta';
-                  if (e.code == 'wrong-password') {
-                    message = 'Contraseña incorrecta';
-                  } else if (e.code == 'too-many-requests') {
-                    message = 'Demasiados intentos. Intenta más tarde';
-                  } else if (e.code == 'requires-recent-login') {
-                    message =
-                        'Por seguridad, cierra sesión y vuelve a iniciar';
-                  } else if (e.code == 'user-not-found') {
-                    message = 'Usuario no encontrado';
-                  } else {
-                    message = 'Error: ${e.message}';
-                  }
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(message),
-                      backgroundColor: Colors.red,
-                      duration: const Duration(seconds: 4),
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  Navigator.pop(context);
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error: $e'),
-                      backgroundColor: Colors.red,
-                      duration: const Duration(seconds: 4),
-                    ),
-                  );
-                }
-              } finally {
-                passwordController.dispose();
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Eliminar cuenta'),
-          ),
-        ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const DeleteAccountScreen(),
       ),
     );
   }
@@ -904,10 +593,10 @@ class _DangerZoneCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.06),
+        color: AppColors.primary.withOpacity(0.06),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.red.withOpacity(0.18),
+          color: AppColors.primary.withOpacity(0.16),
         ),
       ),
       child: Column(
@@ -919,23 +608,23 @@ class _DangerZoneCard extends StatelessWidget {
                 height: 42,
                 width: 42,
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.12),
+                  color: AppColors.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Icon(
-                  Icons.warning_amber_rounded,
-                  color: Colors.red,
+                  Icons.delete_outline_rounded,
+                  color: AppColors.primary,
                   size: 22,
                 ),
               ),
               const SizedBox(width: 12),
               const Expanded(
                 child: Text(
-                  'Zona de peligro',
+                  'Eliminar cuenta',
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
-                    color: Colors.red,
+                    color: AppColors.primary,
                   ),
                 ),
               ),
@@ -943,7 +632,7 @@ class _DangerZoneCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Esta acción eliminará permanentemente tu cuenta y toda tu información.',
+            'Si ya no deseas usar LaboraYa, puedes eliminar tu cuenta de forma permanente.',
             style: TextStyle(
               fontSize: 13.8,
               height: 1.45,
@@ -952,13 +641,14 @@ class _DangerZoneCard extends StatelessWidget {
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton.icon(
+            child: ElevatedButton.icon(
               onPressed: onDeleteTap,
               icon: const Icon(Icons.delete_forever_rounded),
-              label: const Text('Eliminar cuenta'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red,
-                side: BorderSide(color: Colors.red.withOpacity(0.35)),
+              label: const Text('Continuar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),

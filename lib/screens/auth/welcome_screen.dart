@@ -18,18 +18,18 @@ class WelcomeScreen extends StatelessWidget {
             _WelcomeBackground(isDark: isDark),
             SafeArea(
               child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 470),
+                    constraints: const BoxConstraints(maxWidth: 440),
                     child: Column(
                       children: [
-                        const SizedBox(height: 24),
+                        const Spacer(),
 
-                        // Logo premium
+                        // Logo compacto
                         Container(
-                          width: 120,
-                          height: 120,
+                          width: 104,
+                          height: 104,
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
                               colors: [AppColors.primary, Color(0xFF64B5F6)],
@@ -39,23 +39,23 @@ class WelcomeScreen extends StatelessWidget {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primary.withOpacity(0.30),
-                                blurRadius: 30,
-                                offset: const Offset(0, 16),
+                                color: AppColors.primary.withOpacity(0.28),
+                                blurRadius: 28,
+                                offset: const Offset(0, 14),
                               ),
                             ],
                           ),
                           child: const Icon(
                             Icons.work_rounded,
-                            size: 56,
+                            size: 48,
                             color: Colors.white,
                           ),
                         ),
 
-                        const SizedBox(height: 34),
+                        const SizedBox(height: 24),
 
                         Text(
-                          'Bienvenido a LaboraYa',
+                          'LaboraYa',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 34,
@@ -65,24 +65,24 @@ class WelcomeScreen extends StatelessWidget {
                           ),
                         ),
 
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 10),
 
                         Text(
-                          'Encuentra trabajo o publica oportunidades cerca de ti, con una experiencia rápida, segura y moderna.',
+                          'Trabajo y oportunidades cerca de ti.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 15.5,
-                            height: 1.55,
+                            fontSize: 15,
+                            height: 1.4,
                             color: isDark ? Colors.white70 : const Color(0xFF667085),
                           ),
                         ),
 
-                        const SizedBox(height: 30),
+                        const SizedBox(height: 24),
 
-                        // Card de beneficios
+                        // Card compacta
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(
                             color: isDark ? const Color(0xFF171B22) : Colors.white,
                             borderRadius: BorderRadius.circular(24),
@@ -94,37 +94,34 @@ class WelcomeScreen extends StatelessWidget {
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(isDark ? 0.22 : 0.06),
-                                blurRadius: 35,
-                                offset: const Offset(0, 20),
+                                blurRadius: 32,
+                                offset: const Offset(0, 18),
                               ),
                             ],
                           ),
-                          child: Column(
-                            children: const [
-                              _WelcomeFeature(
+                          child: const Column(
+                            children: [
+                              _WelcomeMiniFeature(
                                 icon: Icons.location_on_outlined,
-                                title: 'Trabajos cerca de ti',
-                                subtitle: 'Descubre oportunidades según tu ubicación.',
+                                text: 'Trabajos cerca de ti',
                               ),
-                              SizedBox(height: 16),
-                              _WelcomeFeature(
+                              SizedBox(height: 12),
+                              _WelcomeMiniFeature(
                                 icon: Icons.chat_bubble_outline_rounded,
-                                title: 'Chat directo',
-                                subtitle: 'Habla con clientes y trabajadores sin complicaciones.',
+                                text: 'Chat directo y rápido',
                               ),
-                              SizedBox(height: 16),
-                              _WelcomeFeature(
+                              SizedBox(height: 12),
+                              _WelcomeMiniFeature(
                                 icon: Icons.verified_user_outlined,
-                                title: 'Perfiles y confianza',
-                                subtitle: 'Calificaciones, historial y verificación en un solo lugar.',
+                                text: 'Perfiles con confianza',
                               ),
                             ],
                           ),
                         ),
 
-                        const SizedBox(height: 34),
+                        const SizedBox(height: 26),
 
-                        // Botón iniciar sesión
+                        // Botón principal
                         Container(
                           width: double.infinity,
                           height: 56,
@@ -163,7 +160,7 @@ class WelcomeScreen extends StatelessWidget {
                                 Text(
                                   'Iniciar sesión',
                                   style: TextStyle(
-                                    fontSize: 17,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w800,
                                     color: Colors.white,
                                   ),
@@ -173,9 +170,9 @@ class WelcomeScreen extends StatelessWidget {
                           ),
                         ),
 
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
 
-                        // Botón crear cuenta
+                        // Botón secundario
                         SizedBox(
                           width: double.infinity,
                           height: 56,
@@ -190,12 +187,12 @@ class WelcomeScreen extends StatelessWidget {
                               foregroundColor: AppColors.primary,
                               backgroundColor: isDark
                                   ? Colors.white.withOpacity(0.03)
-                                  : Colors.white.withOpacity(0.70),
+                                  : Colors.white.withOpacity(0.75),
                               side: BorderSide(
                                 color: isDark
                                     ? Colors.white.withOpacity(0.08)
                                     : AppColors.primary.withOpacity(0.20),
-                                width: 1.5,
+                                width: 1.4,
                               ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(18),
@@ -209,7 +206,7 @@ class WelcomeScreen extends StatelessWidget {
                                 Text(
                                   'Crear cuenta',
                                   style: TextStyle(
-                                    fontSize: 17,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
@@ -218,19 +215,18 @@ class WelcomeScreen extends StatelessWidget {
                           ),
                         ),
 
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 14),
 
                         Text(
-                          'Al continuar, podrás encontrar trabajo o contratar ayuda de forma simple.',
+                          'Rápido, simple y seguro.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 12.5,
-                            height: 1.45,
                             color: isDark ? Colors.white38 : Colors.grey[500],
                           ),
                         ),
 
-                        const SizedBox(height: 12),
+                        const Spacer(),
                       ],
                     ),
                   ),
@@ -244,15 +240,13 @@ class WelcomeScreen extends StatelessWidget {
   }
 }
 
-class _WelcomeFeature extends StatelessWidget {
+class _WelcomeMiniFeature extends StatelessWidget {
   final IconData icon;
-  final String title;
-  final String subtitle;
+  final String text;
 
-  const _WelcomeFeature({
+  const _WelcomeMiniFeature({
     required this.icon,
-    required this.title,
-    required this.subtitle,
+    required this.text,
   });
 
   @override
@@ -260,44 +254,29 @@ class _WelcomeFeature extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 46,
-          height: 46,
+          width: 42,
+          height: 42,
           decoration: BoxDecoration(
             color: AppColors.primary.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(13),
           ),
           child: Icon(
             icon,
             color: AppColors.primary,
-            size: 22,
+            size: 20,
           ),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 12),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 15.5,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : const Color(0xFF182234),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  height: 1.45,
-                  color: isDark ? Colors.white60 : const Color(0xFF667085),
-                ),
-              ),
-            ],
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : const Color(0xFF182234),
+            ),
           ),
         ),
       ],
@@ -320,8 +299,8 @@ class _WelcomeBackground extends StatelessWidget {
           top: -70,
           right: -40,
           child: Container(
-            width: 200,
-            height: 200,
+            width: 180,
+            height: 180,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.primary.withOpacity(isDark ? 0.10 : 0.10),
@@ -329,11 +308,11 @@ class _WelcomeBackground extends StatelessWidget {
           ),
         ),
         Positioned(
-          top: 170,
+          top: 180,
           left: -90,
           child: Container(
-            width: 240,
-            height: 240,
+            width: 210,
+            height: 210,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: const Color(0xFF64B5F6).withOpacity(isDark ? 0.08 : 0.10),
@@ -344,8 +323,8 @@ class _WelcomeBackground extends StatelessWidget {
           bottom: -90,
           right: -60,
           child: Container(
-            width: 240,
-            height: 240,
+            width: 220,
+            height: 220,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.primary.withOpacity(isDark ? 0.07 : 0.07),

@@ -1,0 +1,179 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Función auxiliar para verificar autenticación
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Función auxiliar para verificar si es el dueño
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // USERS - Usuarios
+    match /users/{userId} {
+      // Cualquiera puede leer perfiles (para ver info de otros usuarios)
+      allow read: if true;
+      // Solo el dueño puede crear su propio perfil
+      allow create: if isOwner(userId);
+      // El dueño puede actualizar su perfil
+      // O el sistema puede actualizar earnings, rating, completedJobs, totalReviews, monthlyEarnings, totalEarnings, referralCode, referralCount, referralEarnings
+      allow update: if isOwner(userId) || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['earnings', 'rating', 'completedJobs', 'totalReviews', 'monthlyEarnings', 'totalEarnings', 'referralCode', 'referralCount', 'referralEarnings', 'isVerified','usedReferralCode', 'referredBy']));
+      // Solo el dueño puede eliminar su perfil
+      allow delete: if isOwner(userId);
+    }
+    
+    // JOBS - Trabajos
+    match /jobs/{jobId} {
+      // Cualquiera puede leer trabajos (para buscar)
+      allow read: if true;
+      // Solo usuarios autenticados pueden crear trabajos
+      allow create: if isAuthenticated() && request.resource.data.createdBy == request.auth.uid;
+      // El creador puede actualizar su trabajo
+      // O cualquier usuario autenticado puede aceptar el trabajo (cuando acceptedBy es el usuario actual)
+      // O el trabajador aceptado puede actualizar los campos de estado
+      allow update: if isAuthenticated() && (
+        resource.data.createdBy == request.auth.uid ||
+        request.resource.data.acceptedBy == request.auth.uid ||
+        resource.data.acceptedBy == request.auth.uid
+      );
+      // Solo el creador puede eliminar su trabajo
+      allow delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
+    }
+    
+    // MESSAGES - Mensajes
+    match /messages/{messageId} {
+      // Solo usuarios autenticados pueden leer mensajes
+      allow read: if isAuthenticated();
+      // Solo usuarios autenticados pueden crear mensajes
+      // Y el senderId debe coincidir con el usuario autenticado
+      allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
+      // Permitir actualizar al remitente O al receptor (para marcar como leído)
+      allow update: if isAuthenticated() && (
+        resource.data.senderId == request.auth.uid ||
+        resource.data.receiverId == request.auth.uid
+      );
+      // ACTUALIZADO: El remitente O el receptor pueden eliminar el mensaje
+      allow delete: if isAuthenticated() && (
+        resource.data.senderId == request.auth.uid ||
+        resource.data.receiverId == request.auth.uid
+      );
+    }
+    
+    // REVIEWS - Calificaciones
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      // ACTUALIZADO: El que calificó O el calificado pueden actualizar/eliminar
+      allow update, delete: if isAuthenticated() && (
+        resource.data.reviewerId == request.auth.uid ||
+        resource.data.reviewedUserId == request.auth.uid
+      );
+    }
+    
+    // NOTIFICATIONS - Notificaciones
+    match /notifications/{notificationId} {
+      // Solo el destinatario puede leer sus notificaciones
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // IMPORTANTE: Cualquier usuario autenticado puede crear notificaciones
+      // (necesario para que un trabajador pueda crear notificaciones para el dueño del trabajo)
+      allow create: if isAuthenticated();
+      // Solo el destinatario puede marcar como leída o actualizar
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Solo el destinatario puede eliminar su notificación
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+    
+    // JOB_APPLICATIONS - Solicitudes de Trabajo
+    match /job_applications/{applicationId} {
+      // Función auxiliar para obtener el dueño del trabajo
+      function getJobOwner(jobId) {
+        return get(/databases/$(database)/documents/jobs/$(jobId)).data.createdBy;
+      }
+      
+      // Cualquier usuario autenticado puede crear una solicitud
+      allow create: if isAuthenticated() && request.resource.data.applicantId == request.auth.uid;
+      // El solicitante y el dueño del trabajo pueden leer la solicitud
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.applicantId ||
+        request.auth.uid == getJobOwner(resource.data.jobId)
+      );
+      // Solo el dueño del trabajo puede actualizar (aceptar/rechazar)
+      allow update: if isAuthenticated() && request.auth.uid == getJobOwner(resource.data.jobId);
+      // ACTUALIZADO: El dueño del trabajo O el solicitante pueden eliminar
+      allow delete: if isAuthenticated() && (
+        request.auth.uid == getJobOwner(resource.data.jobId) ||
+        request.auth.uid == resource.data.applicantId
+      );
+    }
+    
+    // FAVORITES - Favoritos
+    match /favorites/{favoriteId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && isOwner(resource.data.userId);
+      allow delete: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+    
+    // REPORTS - Reportes
+    match /reports/{reportId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.reporterId);
+      allow create: if isAuthenticated() && request.resource.data.reporterId == request.auth.uid;
+      allow update: if false; // Solo admins pueden actualizar
+      // ACTUALIZADO: El que reportó O el reportado pueden eliminar
+      allow delete: if isAuthenticated() && (
+        resource.data.reporterId == request.auth.uid ||
+        resource.data.reportedUserId == request.auth.uid
+      );
+    }
+    
+    // PORTFOLIO - Portafolio
+    match /portfolio/{portfolioId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && isOwner(resource.data.userId);
+      allow delete: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+    
+    // VERIFICATIONS - Verificaciones
+    match /verifications/{verificationId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if false; // Solo admins pueden actualizar
+      // ACTUALIZADO: El usuario puede eliminar su verificación
+      allow delete: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+    
+    // REFERRALS - Referidos
+    match /referrals/{referralId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.referrerId ||
+        request.auth.uid == resource.data.referredUserId
+      );
+      allow create: if isAuthenticated();
+      allow update: if false;
+      // ACTUALIZADO: El referidor O el referido pueden eliminar
+      allow delete: if isAuthenticated() && (
+        resource.data.referrerId == request.auth.uid ||
+        resource.data.referredUserId == request.auth.uid
+      );
+    }
+    
+    // BLOCKED_USERS - Usuarios Bloqueados
+    match /blocked_users/{blockId} {
+      // Solo el bloqueador puede leer sus propios bloqueos
+      allow read: if isAuthenticated() && resource.data.blockerId == request.auth.uid;
+      // Solo usuarios autenticados pueden crear bloqueos (donde ellos son el bloqueador)
+      allow create: if isAuthenticated() && request.resource.data.blockerId == request.auth.uid;
+      // No se pueden actualizar bloqueos (son permanentes hasta que se eliminen)
+      allow update: if false;
+      // ACTUALIZADO: El bloqueador O el bloqueado pueden eliminar
+      allow delete: if isAuthenticated() && (
+        resource.data.blockerId == request.auth.uid ||
+        resource.data.blockedId == request.auth.uid
+      );
+    }
+  }
+}

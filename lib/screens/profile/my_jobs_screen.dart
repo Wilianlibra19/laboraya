@@ -88,15 +88,15 @@ class _MyJobsScreenState extends State<MyJobsScreen>
               unselectedLabelColor:
                   isDark ? Colors.white70 : const Color(0xFF607080),
               labelStyle: const TextStyle(
-                fontSize: 13,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w700,
               ),
               dividerColor: Colors.transparent,
               splashBorderRadius: BorderRadius.circular(14),
-              tabs: [
-                Tab(text: 'Publicados (${myJobs.length})'),
-                Tab(text: 'Aceptados (${acceptedJobs.length})'),
-                Tab(text: 'Completados (${completedJobs.length})'),
+              tabs: const [
+                Tab(text: 'Publicados'),
+                Tab(text: 'Aceptados'),
+                Tab(text: 'Completados'),
               ],
             ),
           ),
@@ -204,37 +204,35 @@ class _MyJobsScreenState extends State<MyJobsScreen>
     required bool isDark,
     bool showStatus = false,
   }) {
-    if (jobs.isEmpty) {
-      return _EmptyJobsState(
-        isDark: isDark,
-        icon: emptyIcon,
-        title: emptyTitle,
-        subtitle: emptySubtitle,
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-      itemCount: jobs.length,
-      itemBuilder: (context, index) {
-        final job = jobs[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: JobCard(
-            job: job,
-            showStatus: showStatus,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => JobDetailScreen(jobId: job.id),
+    return jobs.isEmpty
+        ? _EmptyJobsState(
+            isDark: isDark,
+            icon: emptyIcon,
+            title: emptyTitle,
+            subtitle: emptySubtitle,
+          )
+        : ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+            itemCount: jobs.length,
+            itemBuilder: (context, index) {
+              final job = jobs[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: JobCard(
+                  job: job,
+                  showStatus: showStatus,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => JobDetailScreen(jobId: job.id),
+                      ),
+                    );
+                  },
                 ),
               );
             },
-          ),
-        );
-      },
-    );
+          );
   }
 }
 

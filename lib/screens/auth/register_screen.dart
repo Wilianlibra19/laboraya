@@ -61,7 +61,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     switch (_currentStep) {
       case 0:
         if (_nameController.text.trim().isEmpty) {
-          _showMessage('Ingresa tu nombre completo', isError: true);
+          _showMessage('Ingresa tu nombre', isError: true);
           return;
         }
         break;
@@ -81,7 +81,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         break;
       case 3:
         if (_passwordController.text.trim().length < 6) {
-          _showMessage('La contraseña debe tener mínimo 6 caracteres', isError: true);
+          _showMessage('Mínimo 6 caracteres', isError: true);
           return;
         }
         break;
@@ -93,7 +93,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         break;
       case 5:
         if (!_acceptedTerms) {
-          _showMessage('Debes aceptar los términos y la privacidad', isError: true);
+          _showMessage('Debes aceptar los términos', isError: true);
           return;
         }
         _register();
@@ -122,8 +122,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final email = _emailController.text.trim();
       final password = _passwordController.text.trim();
 
-      final credential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
+      final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -173,7 +172,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (mounted) {
         _showMessage(message, isError: true);
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         _showMessage('Ocurrió un problema al crear tu cuenta', isError: true);
       }
@@ -192,31 +191,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
         color: isDark ? const Color(0xFF0E1116) : const Color(0xFFF5F8FC),
         child: Stack(
           children: [
-            _RegisterBackground(isDark: isDark),
+            _RegisterCompactBackground(isDark: isDark),
             SafeArea(
               child: Column(
                 children: [
                   _buildHeader(isDark),
                   Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Center(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 470),
-                          child: Column(
-                            children: [
-                              const SizedBox(height: 8),
-                              _buildBrandTop(isDark),
-                              const SizedBox(height: 24),
-                              _buildStepCard(isDark),
-                              const SizedBox(height: 20),
-                            ],
-                          ),
+                          constraints: const BoxConstraints(maxWidth: 420),
+                          child: _buildCard(isDark),
                         ),
                       ),
                     ),
                   ),
-                  _buildBottomAction(isDark),
+                  _buildBottomButton(),
                 ],
               ),
             ),
@@ -228,7 +219,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _buildHeader(bool isDark) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
       child: Column(
         children: [
           Row(
@@ -237,19 +228,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 onTap: _currentStep > 0 ? _previousStep : () => Navigator.pop(context),
                 borderRadius: BorderRadius.circular(14),
                 child: Container(
-                  width: 42,
-                  height: 42,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: isDark ? Colors.white.withOpacity(0.06) : Colors.white,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                       color: isDark
-                          ? Colors.white.withOpacity(0.06)
+                          ? Colors.white.withOpacity(0.05)
                           : const Color(0xFFE8EEF6),
                     ),
                   ),
                   child: Icon(
-                    _currentStep > 0 ? Icons.arrow_back_ios_new_rounded : Icons.close_rounded,
+                    _currentStep > 0
+                        ? Icons.arrow_back_ios_new_rounded
+                        : Icons.close_rounded,
                     size: 18,
                     color: isDark ? Colors.white : const Color(0xFF182234),
                   ),
@@ -257,7 +250,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const Spacer(),
               Text(
-                'Paso ${_currentStep + 1} de $_totalSteps',
+                '${_currentStep + 1}/$_totalSteps',
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
@@ -266,12 +259,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: LinearProgressIndicator(
               value: (_currentStep + 1) / _totalSteps,
-              minHeight: 7,
+              minHeight: 6,
               backgroundColor: isDark ? Colors.white12 : Colors.grey[300],
               valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
             ),
@@ -281,64 +274,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildBrandTop(bool isDark) {
-    return Column(
-      children: [
-        Container(
-          width: 88,
-          height: 88,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppColors.primary, Color(0xFF64B5F6)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.32),
-                blurRadius: 26,
-                offset: const Offset(0, 14),
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.person_add_alt_1_rounded,
-            size: 42,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 18),
-        Text(
-          'Crear cuenta',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.w800,
-            color: isDark ? Colors.white : const Color(0xFF182234),
-            letterSpacing: -1,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Empieza en LaboraYa y conecta con nuevas oportunidades',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14.5,
-            height: 1.45,
-            color: isDark ? Colors.white70 : const Color(0xFF667085),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStepCard(bool isDark) {
+  Widget _buildCard(bool isDark) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF171B22) : Colors.white,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: isDark
               ? Colors.white.withOpacity(0.05)
@@ -347,25 +289,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(isDark ? 0.22 : 0.06),
-            blurRadius: 36,
-            offset: const Offset(0, 20),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
           ),
         ],
       ),
       child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 260),
-        transitionBuilder: (child, animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0.06, 0),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            ),
-          );
-        },
+        duration: const Duration(milliseconds: 220),
         child: KeyedSubtree(
           key: ValueKey(_currentStep),
           child: _buildStepContent(isDark),
@@ -374,82 +304,56 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildBottomAction(bool isDark) {
+  Widget _buildBottomButton() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      padding: const EdgeInsets.fromLTRB(18, 8, 18, 20),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 470),
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              height: 56,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: const LinearGradient(
-                  colors: [AppColors.primary, Color(0xFF1565C0)],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.30),
-                    blurRadius: 22,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: const LinearGradient(
+                colors: [AppColors.primary, Color(0xFF1565C0)],
               ),
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _nextStep,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.28),
+                  blurRadius: 18,
+                  offset: const Offset(0, 10),
                 ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2.5,
-                        ),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            _currentStep == _totalSteps - 1
-                                ? Icons.check_circle_rounded
-                                : Icons.arrow_forward_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            _currentStep == _totalSteps - 1
-                                ? 'Crear cuenta'
-                                : 'Continuar',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
+              ],
+            ),
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _nextStep,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
                       ),
-              ),
+                    )
+                  : Text(
+                      _currentStep == _totalSteps - 1 ? 'Crear cuenta' : 'Continuar',
+                      style: const TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
             ),
-            const SizedBox(height: 14),
-            Text(
-              'Tu información se usará para crear tu perfil de LaboraYa.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12.5,
-                color: isDark ? Colors.white38 : Colors.grey[500],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -458,80 +362,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget _buildStepContent(bool isDark) {
     switch (_currentStep) {
       case 0:
-        return _buildNameStep(isDark);
+        return _StepBox(
+          title: 'Tu nombre',
+          subtitle: 'Así te verán en la app.',
+          child: _RegisterInputCompact(
+            controller: _nameController,
+            label: 'Nombre completo',
+            hint: 'Juan Pérez',
+            icon: Icons.person_outline_rounded,
+            isDark: isDark,
+            autofocus: true,
+          ),
+        );
+
       case 1:
-        return _buildEmailStep(isDark);
+        return _StepBox(
+          title: 'Tu correo',
+          subtitle: 'Lo usarás para entrar.',
+          child: _RegisterInputCompact(
+            controller: _emailController,
+            label: 'Correo electrónico',
+            hint: 'tu@email.com',
+            icon: Icons.email_outlined,
+            isDark: isDark,
+            keyboardType: TextInputType.emailAddress,
+            autofocus: true,
+          ),
+        );
+
       case 2:
-        return _buildPhoneStep(isDark);
+        return _StepBox(
+          title: 'Tu teléfono',
+          subtitle: 'Para que puedan contactarte.',
+          child: _RegisterInputCompact(
+            controller: _phoneController,
+            label: 'Teléfono',
+            hint: '+51 999 999 999',
+            icon: Icons.phone_outlined,
+            isDark: isDark,
+            keyboardType: TextInputType.phone,
+            autofocus: true,
+          ),
+        );
+
       case 3:
-        return _buildPasswordStep(isDark);
-      case 4:
-        return _buildConfirmPasswordStep(isDark);
-      case 5:
-        return _buildTermsStep(isDark);
-      default:
-        return const SizedBox.shrink();
-    }
-  }
-
-  Widget _buildNameStep(bool isDark) {
-    return _StepLayout(
-      icon: Icons.badge_outlined,
-      title: '¿Cómo te llamas?',
-      subtitle: 'Tu nombre será visible en tu perfil dentro de la app.',
-      child: _ModernRegisterInput(
-        controller: _nameController,
-        label: 'Nombre completo',
-        hint: 'Juan Pérez',
-        icon: Icons.person_outline_rounded,
-        isDark: isDark,
-        autofocus: true,
-      ),
-    );
-  }
-
-  Widget _buildEmailStep(bool isDark) {
-    return _StepLayout(
-      icon: Icons.alternate_email_rounded,
-      title: '¿Cuál es tu correo?',
-      subtitle: 'Lo usaremos para iniciar sesión y recuperar tu cuenta.',
-      child: _ModernRegisterInput(
-        controller: _emailController,
-        label: 'Correo electrónico',
-        hint: 'tu@email.com',
-        icon: Icons.email_outlined,
-        isDark: isDark,
-        keyboardType: TextInputType.emailAddress,
-        autofocus: true,
-      ),
-    );
-  }
-
-  Widget _buildPhoneStep(bool isDark) {
-    return _StepLayout(
-      icon: Icons.phone_android_rounded,
-      title: 'Tu número de teléfono',
-      subtitle: 'Ayuda a que puedan contactarte más rápido.',
-      child: _ModernRegisterInput(
-        controller: _phoneController,
-        label: 'Teléfono',
-        hint: '+51 999 999 999',
-        icon: Icons.phone_outlined,
-        isDark: isDark,
-        keyboardType: TextInputType.phone,
-        autofocus: true,
-      ),
-    );
-  }
-
-  Widget _buildPasswordStep(bool isDark) {
-    return _StepLayout(
-      icon: Icons.lock_outline_rounded,
-      title: 'Crea una contraseña',
-      subtitle: 'Usa una contraseña segura de al menos 6 caracteres.',
-      child: Column(
-        children: [
-          _ModernRegisterInput(
+        return _StepBox(
+          title: 'Crea tu contraseña',
+          subtitle: 'Mínimo 6 caracteres.',
+          child: _RegisterInputCompact(
             controller: _passwordController,
             label: 'Contraseña',
             hint: '••••••••',
@@ -550,140 +428,129 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 14),
-          _PasswordTipBox(isDark: isDark),
-        ],
-      ),
-    );
-  }
+        );
 
-  Widget _buildConfirmPasswordStep(bool isDark) {
-    return _StepLayout(
-      icon: Icons.verified_user_outlined,
-      title: 'Confirma tu contraseña',
-      subtitle: 'Escribe nuevamente la contraseña para continuar.',
-      child: _ModernRegisterInput(
-        controller: _confirmPasswordController,
-        label: 'Confirmar contraseña',
-        hint: '••••••••',
-        icon: Icons.lock_person_outlined,
-        isDark: isDark,
-        obscureText: _obscureConfirmPassword,
-        autofocus: true,
-        suffixIcon: IconButton(
-          onPressed: () {
-            setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
-          },
-          icon: Icon(
-            _obscureConfirmPassword
-                ? Icons.visibility_off_outlined
-                : Icons.visibility_outlined,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTermsStep(bool isDark) {
-    return _StepLayout(
-      icon: Icons.verified_outlined,
-      title: 'Acepta para continuar',
-      subtitle: 'Revisa la información legal antes de crear tu cuenta.',
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1F2430) : const Color(0xFFF8FAFD),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isDark
-                ? Colors.white.withOpacity(0.05)
-                : const Color(0xFFE8EEF6),
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Checkbox(
-              value: _acceptedTerms,
-              onChanged: (value) {
-                setState(() => _acceptedTerms = value ?? false);
+      case 4:
+        return _StepBox(
+          title: 'Confirma contraseña',
+          subtitle: 'Repite la misma contraseña.',
+          child: _RegisterInputCompact(
+            controller: _confirmPasswordController,
+            label: 'Confirmar contraseña',
+            hint: '••••••••',
+            icon: Icons.lock_person_outlined,
+            isDark: isDark,
+            obscureText: _obscureConfirmPassword,
+            autofocus: true,
+            suffixIcon: IconButton(
+              onPressed: () {
+                setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
               },
-              activeColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(5),
+              icon: Icon(
+                _obscureConfirmPassword
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
               ),
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: RichText(
-                  text: TextSpan(
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.55,
-                      color: isDark ? Colors.white70 : const Color(0xFF667085),
+          ),
+        );
+
+      case 5:
+        return _StepBox(
+          title: 'Aceptar términos',
+          subtitle: 'Necesario para crear tu cuenta.',
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1F2430) : const Color(0xFFF8FAFD),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withOpacity(0.05)
+                    : const Color(0xFFE8EEF6),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Checkbox(
+                  value: _acceptedTerms,
+                  onChanged: (value) {
+                    setState(() => _acceptedTerms = value ?? false);
+                  },
+                  activeColor: AppColors.primary,
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: RichText(
+                      text: TextSpan(
+                        style: TextStyle(
+                          fontSize: 13.6,
+                          height: 1.5,
+                          color: isDark ? Colors.white70 : const Color(0xFF667085),
+                        ),
+                        children: [
+                          const TextSpan(text: 'Acepto los '),
+                          TextSpan(
+                            text: 'Términos',
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700,
+                              decoration: TextDecoration.underline,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const TermsScreen(),
+                                  ),
+                                );
+                              },
+                          ),
+                          const TextSpan(text: ' y la '),
+                          TextSpan(
+                            text: 'Privacidad',
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700,
+                              decoration: TextDecoration.underline,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const PrivacyScreen(),
+                                  ),
+                                );
+                              },
+                          ),
+                          const TextSpan(text: '.'),
+                        ],
+                      ),
                     ),
-                    children: [
-                      const TextSpan(text: 'Acepto los '),
-                      TextSpan(
-                        text: 'Términos y Condiciones',
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w700,
-                          decoration: TextDecoration.underline,
-                        ),
-                        recognizer: TapGestureRecognizer()
-                          ..onTap = () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const TermsScreen(),
-                              ),
-                            );
-                          },
-                      ),
-                      const TextSpan(text: ' y la '),
-                      TextSpan(
-                        text: 'Política de Privacidad',
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w700,
-                          decoration: TextDecoration.underline,
-                        ),
-                        recognizer: TapGestureRecognizer()
-                          ..onTap = () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const PrivacyScreen(),
-                              ),
-                            );
-                          },
-                      ),
-                      const TextSpan(
-                        text: ' para usar LaboraYa.',
-                      ),
-                    ],
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
+          ),
+        );
+
+      default:
+        return const SizedBox.shrink();
+    }
   }
 }
 
-class _StepLayout extends StatelessWidget {
-  final IconData icon;
+class _StepBox extends StatelessWidget {
   final String title;
   final String subtitle;
   final Widget child;
 
-  const _StepLayout({
-    required this.icon,
+  const _StepBox({
     required this.title,
     required this.subtitle,
     required this.child,
@@ -694,49 +561,33 @@ class _StepLayout extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 68,
-          height: 68,
-          decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(22),
-          ),
-          child: Icon(
-            icon,
-            color: AppColors.primary,
-            size: 32,
-          ),
-        ),
-        const SizedBox(height: 20),
         Text(
           title,
           style: TextStyle(
-            fontSize: 28,
+            fontSize: 23,
             fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
             color: isDark ? Colors.white : const Color(0xFF182234),
-            letterSpacing: -0.8,
           ),
-          textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 6),
         Text(
           subtitle,
           style: TextStyle(
-            fontSize: 14.5,
-            height: 1.5,
+            fontSize: 13.5,
             color: isDark ? Colors.white60 : const Color(0xFF667085),
           ),
-          textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 30),
+        const SizedBox(height: 18),
         child,
       ],
     );
   }
 }
 
-class _ModernRegisterInput extends StatelessWidget {
+class _RegisterInputCompact extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final String hint;
@@ -747,7 +598,7 @@ class _ModernRegisterInput extends StatelessWidget {
   final bool autofocus;
   final Widget? suffixIcon;
 
-  const _ModernRegisterInput({
+  const _RegisterInputCompact({
     required this.controller,
     required this.label,
     required this.hint,
@@ -767,7 +618,7 @@ class _ModernRegisterInput extends StatelessWidget {
       keyboardType: keyboardType,
       obscureText: obscureText,
       style: TextStyle(
-        fontSize: 16,
+        fontSize: 15,
         color: isDark ? Colors.white : const Color(0xFF182234),
       ),
       decoration: InputDecoration(
@@ -776,17 +627,17 @@ class _ModernRegisterInput extends StatelessWidget {
         prefixIcon: Icon(
           icon,
           color: AppColors.primary,
-          size: 22,
+          size: 21,
         ),
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: isDark ? const Color(0xFF1F2430) : const Color(0xFFF8FAFD),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(
             color: isDark
                 ? Colors.white.withOpacity(0.04)
@@ -794,69 +645,22 @@ class _ModernRegisterInput extends StatelessWidget {
           ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(
             color: AppColors.primary,
             width: 2,
           ),
         ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 18,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       ),
     );
   }
 }
 
-class _PasswordTipBox extends StatelessWidget {
+class _RegisterCompactBackground extends StatelessWidget {
   final bool isDark;
 
-  const _PasswordTipBox({
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.15),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.info_outline_rounded,
-            color: AppColors.primary,
-            size: 18,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Te recomendamos combinar letras y números para una contraseña más segura.',
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.45,
-                color: isDark ? Colors.white70 : const Color(0xFF475467),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RegisterBackground extends StatelessWidget {
-  final bool isDark;
-
-  const _RegisterBackground({
+  const _RegisterCompactBackground({
     required this.isDark,
   });
 
@@ -865,11 +669,11 @@ class _RegisterBackground extends StatelessWidget {
     return Stack(
       children: [
         Positioned(
-          top: -60,
-          right: -30,
+          top: -40,
+          right: -20,
           child: Container(
-            width: 180,
-            height: 180,
+            width: 130,
+            height: 130,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.primary.withOpacity(isDark ? 0.11 : 0.10),
@@ -877,26 +681,14 @@ class _RegisterBackground extends StatelessWidget {
           ),
         ),
         Positioned(
-          top: 180,
-          left: -70,
+          bottom: -50,
+          left: -30,
           child: Container(
-            width: 220,
-            height: 220,
+            width: 160,
+            height: 160,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFF64B5F6).withOpacity(isDark ? 0.08 : 0.10),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: -80,
-          right: -50,
-          child: Container(
-            width: 230,
-            height: 230,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.primary.withOpacity(isDark ? 0.07 : 0.07),
+              color: const Color(0xFF64B5F6).withOpacity(isDark ? 0.08 : 0.08),
             ),
           ),
         ),

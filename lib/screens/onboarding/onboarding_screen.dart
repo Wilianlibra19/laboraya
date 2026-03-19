@@ -194,8 +194,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           borderRadius: BorderRadius.circular(18),
                           onTap: _goNext,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 17),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 20,
+                            ),
                             child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
@@ -203,15 +207,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                       ? Icons.check_circle_outline_rounded
                                       : Icons.arrow_forward_rounded,
                                   color: Colors.white,
-                                  size: 22,
+                                  size: 20,
                                 ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  isLast ? 'Comenzar ahora' : 'Siguiente',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    isLast ? 'Comenzar ahora' : 'Siguiente',
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],

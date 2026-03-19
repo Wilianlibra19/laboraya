@@ -850,7 +850,7 @@ class _ChatInputBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1B1E22) : Colors.white,
             borderRadius: BorderRadius.circular(24),
@@ -886,30 +886,36 @@ class _ChatInputBar extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
-                child: TextField(
-                  controller: controller,
-                  maxLines: 5,
-                  minLines: 1,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black87,
-                    fontSize: 15,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxHeight: 120,
                   ),
-                  decoration: InputDecoration(
-                    hintText: 'Escribe un mensaje...',
-                    hintStyle: TextStyle(
-                      color: isDark ? Colors.grey[500] : Colors.grey[600],
+                  child: TextField(
+                    controller: controller,
+                    maxLines: 5,
+                    minLines: 1,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black87,
+                      fontSize: 15,
                     ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 2,
-                      vertical: 10,
+                    decoration: InputDecoration(
+                      hintText: 'Escribe un mensaje...',
+                      hintStyle: TextStyle(
+                        color: isDark ? Colors.grey[500] : Colors.grey[600],
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 2,
+                        vertical: 8,
+                      ),
+                      isDense: true,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
                 decoration: BoxDecoration(

@@ -173,26 +173,11 @@ class _HomeScreenState extends State<HomeScreen> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _QuickActionCard(
-                        icon: Icons.location_on_outlined,
-                        title: 'Cerca de ti',
-                        subtitle: 'Trabajos por ubicación',
-                        onTap: _openNearbyJobs,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _QuickActionCard(
-                        icon: Icons.tune,
-                        title: 'Filtros',
-                        subtitle: 'Pago, distancia y más',
-                        onTap: _openFilters,
-                      ),
-                    ),
-                  ],
+                child: _QuickActionCard(
+                  icon: Icons.location_on_outlined,
+                  title: 'Cerca de ti',
+                  subtitle: 'Trabajos por ubicación',
+                  onTap: _openNearbyJobs,
                 ),
               ),
             ),
